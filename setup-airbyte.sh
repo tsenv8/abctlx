@@ -20,7 +20,7 @@ set -e
 
 echo "---------------------------------------------------"
 echo "Running setup-airbyte.sh :)"
-echo "UI WILL BE ON PORT :$AIRBYTE_WEBAPP_PORT"
+echo "UI WILL BE ON PORT $AIRBYTE_HOST:$AIRBYTE_WEBAPP_PORT"
 
 if ! command -v abctl &> /dev/null; then
     echo "abctl not found. Installing abctl now..."
@@ -31,13 +31,12 @@ else
 fi
 
 echo "Cleaning up old installation..."
-abctl local uninstall --persisted --verbose || echo "No installation to uninstall..."
+abctl local uninstall --verbose || echo "No installation to uninstall..."
 
 echo "Installing abctl..."
 abctl local install \
   --verbose \
   --port="$AIRBYTE_WEBAPP_PORT" \
-  --disable-auth \
   --no-browser \
   --insecure-cookies
 
