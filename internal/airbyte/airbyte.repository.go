@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"net/http"
+	"strconv"
 )
 
 type AirbyteRepository interface {
@@ -41,7 +42,7 @@ func (r *airbyteRepository) GenerateAccessToken() string {
 
 func (r *airbyteRepository) HealthCheck() string {
 
-	url := r.config.URL + "/v1/health"
+	url := r.config.URL + ":" + strconv.Itoa(r.config.Port) + "/v1/health"
 	req, _ := http.NewRequest("GET", url, nil)
 
 	res, err := http.DefaultClient.Do(req)

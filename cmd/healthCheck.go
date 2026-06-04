@@ -8,14 +8,14 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var generateAccessTokenCmd = &cobra.Command{
+var healthCheckCmd = &cobra.Command{
 	Use: "generateAccessToken",
 	Run: func(cmd *cobra.Command, args []string) {
-		output := airbyte.New(config.Data).GenerateAccessToken()
+		output := airbyte.New(config.Data).HealthCheck()
 		fmt.Println(output)
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(generateAccessTokenCmd)
+	rootCmd.AddCommand(healthCheckCmd)
 }
