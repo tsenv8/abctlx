@@ -50,9 +50,9 @@ func (r *airbyteRepository) GenerateAccessToken() string {
 }
 
 func (r *airbyteRepository) HealthCheck() string {
-
-	url := r.config.URL + ":" + strconv.Itoa(r.config.Port) + "/v1/health"
-	req, _ := http.NewRequest("GET", url, nil)
+	apiUrl := "/v1/health"
+	finalUrl := r.GetURL(&apiUrl)
+	req, _ := http.NewRequest("GET", finalUrl, nil)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
