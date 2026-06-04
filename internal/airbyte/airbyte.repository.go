@@ -12,6 +12,7 @@ import (
 type AirbyteRepository interface {
 	GenerateAccessToken() string
 	HealthCheck() string
+	GetURL(*string) string
 }
 
 type airbyteRepository struct {
@@ -22,9 +23,17 @@ func New(c config.AirbyteConfig) AirbyteRepository {
 	return &airbyteRepository{config: c}
 }
 
+func (r *airbyteRepository) GetURL(addtlUrl *string) string {
+	if addtlUrl != nil {
+		return r.config.URL + strconv.Itoa(r.config.Port) + r.config.API_URL + *addtlUrl
+	}
+	return r.config.URL + strconv.Itoa(r.config.Port) + r.config.API_URL
+}
+
 func (r *airbyteRepository) GenerateAccessToken() string {
-	url := r.config.URL + "/v1/applications/token"
-	req, _ := http.NewRequest("POST", url, nil)
+	apiUrl := "/applications/token"
+	finalUrl := r.GetURL(&apiUrl)
+	req, _ := http.NewRequest("POST", finalUrl, nil)
 
 	req.Header.Add("content-type", "application/json")
 	req.Header.Add("accept", "application/json")
