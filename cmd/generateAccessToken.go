@@ -4,6 +4,7 @@ import (
 	"abctlx/internal/airbyte"
 	"abctlx/internal/config"
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +12,11 @@ import (
 var generateAccessTokenCmd = &cobra.Command{
 	Use: "token",
 	Run: func(cmd *cobra.Command, args []string) {
-		output := airbyte.New(config.Data).GenerateAccessToken()
+		output, err := airbyte.New(config.Data).GenerateAccessToken()
+		if err != nil {
+			log.Fatal(err)
+		}
+
 		fmt.Println(output)
 	},
 }
