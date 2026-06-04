@@ -24,10 +24,12 @@ func New(c config.AirbyteConfig) AirbyteRepository {
 }
 
 func (r *airbyteRepository) GetURL(addtlUrl *string) string {
+	port := ":" + strconv.Itoa(r.config.Port)
+	
 	if addtlUrl != nil {
-		return r.config.URL + strconv.Itoa(r.config.Port) + r.config.API_URL + *addtlUrl
+		return r.config.URL + port + r.config.API_URL + *addtlUrl
 	}
-	return r.config.URL + strconv.Itoa(r.config.Port) + r.config.API_URL
+	return r.config.URL + port + r.config.API_URL
 }
 
 func (r *airbyteRepository) GenerateAccessToken() string {
