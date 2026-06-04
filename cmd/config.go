@@ -17,5 +17,5 @@ var configCmd = &cobra.Command{
 }
 
 func init() {
-	rootCmd.AddCommand(healthCheckCmd)
+	rootCmd.AddCommand(configCmd)
 }
