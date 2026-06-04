@@ -9,7 +9,7 @@ import (
 )
 
 var generateAccessTokenCmd = &cobra.Command{
-	Use: "generateAccessToken",
+	Use: "token",
 	Run: func(cmd *cobra.Command, args []string) {
 		output := airbyte.New(config.Data).GenerateAccessToken()
 		fmt.Println(output)

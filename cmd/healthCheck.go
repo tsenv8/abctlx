@@ -9,7 +9,7 @@ import (
 )
 
 var healthCheckCmd = &cobra.Command{
-	Use: "generateAccessToken",
+	Use: "health",
 	Run: func(cmd *cobra.Command, args []string) {
 		output := airbyte.New(config.Data).HealthCheck()
 		fmt.Println(output)
