@@ -40,7 +40,7 @@ func (r *airbyteRepository) GenerateAccessToken() string {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal("Failed Command")
+		log.Fatal(err.Error())
 	}
 
 	defer res.Body.Close()
@@ -56,7 +56,7 @@ func (r *airbyteRepository) HealthCheck() string {
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal("Failed Command")
+		log.Fatal(err.Error())
 	}
 
 	defer res.Body.Close()
