@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"abctlx/internal/airbyte"
-	"abctlx/internal/config"
+	"context"
 	"fmt"
 	"log"
 
@@ -12,12 +12,19 @@ import (
 var healthCheckCmd = &cobra.Command{
 	Use: "health",
 	Run: func(cmd *cobra.Command, args []string) {
-		output, err := airbyte.New(config.Data).HealthCheck()
+		var status string
+		res, err := airbyte.NewAirbyteService(context.Background()).Health()
 		if err != nil {
-			log.Fatal("ERROR: " + err.Error())
+			log.Fatal("ERROR:" + err.Error())
 		}
 
-		fmt.Println(output)
+		if res.Status {
+			status = "true"
+		} else {
+			status = "false"
+		}
+
+		fmt.Println("Status:" + status)
 	},
 }
 

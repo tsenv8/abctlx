@@ -2,7 +2,7 @@ package cmd
 
 import (
 	"abctlx/internal/airbyte"
-	"abctlx/internal/config"
+	"context"
 	"fmt"
 	"log"
 
@@ -12,12 +12,15 @@ import (
 var generateAccessTokenCmd = &cobra.Command{
 	Use: "token",
 	Run: func(cmd *cobra.Command, args []string) {
-		output, err := airbyte.New(config.Data).GenerateAccessToken()
+		ctx := context.Background()
+
+		s := airbyte.NewAirbyteService(ctx)
+		res, err := s.GenerateAccessToken()
 		if err != nil {
-			log.Fatal("ERROR: " + err.Error())
+			log.Fatalln(err)
 		}
 
-		fmt.Println(output)
+		fmt.Printf(res.AccessToken)
 	},
 }
 

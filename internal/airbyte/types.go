@@ -1,10 +1,10 @@
 package airbyte
 
 type AbctlxResponse struct {
-	msg      string
-	body     []byte
-	data     any
-	endpoint *string
+	Msg      string
+	Body     []byte
+	Data     any
+	Endpoint *string
 }
 
 // sources
@@ -58,6 +58,14 @@ type TunnelMethodParameter struct {
 type GenerateAccessTokenRequest struct {
 	ClientId  string `json:"client_id"`
 	ClientKey string `json:"client_secret"`
+}
+
+type GenerateAccessTokenResponse struct {
+	AccessToken string `json:"access_token"`
+}
+
+type HealthCheckResponse struct {
+	Status bool
 }
 
 // workspaces
