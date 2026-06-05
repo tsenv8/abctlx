@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -68,7 +67,7 @@ func (ac *airbyteClient) Request(
 	if requestBody != nil {
 		jsonBytes, err := json.Marshal(requestBody)
 		if err != nil {
-			return nil, fmt.Errorf(REQUEST_FAIL)
+			return nil, err
 		}
 
 		buf = bytes.NewBuffer(jsonBytes)
@@ -78,7 +77,7 @@ func (ac *airbyteClient) Request(
 	url := ac.GetURL(&endpoint)
 	req, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {
-		return nil, fmt.Errorf(REQUEST_FAIL)
+		return nil, err
 	}
 
 	//headers and tokens
@@ -90,18 +89,18 @@ func (ac *airbyteClient) Request(
 
 	res, err := ac.Http.Do(req)
 	if err != nil {
-		return nil, fmt.Errorf(REQUEST_FAIL)
+		return nil, err
 	}
 	defer res.Body.Close()
 
 	if res.StatusCode >= 400 {
-		return nil, fmt.Errorf(REQUEST_FAIL)
+		return nil, err
 	}
 
 	//res.Body reading
 	body, err := io.ReadAll(res.Body)
 	if err != nil {
-		return nil, fmt.Errorf(REQUEST_FAIL)
+		return nil, err
 	}
 
 	return &AbctlxResponse{
