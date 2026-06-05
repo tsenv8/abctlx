@@ -1,9 +1,10 @@
 package airbyte
 
 type AbctlxResponse struct {
-	msg  string
-	body []byte
-	data any
+	msg      string
+	body     []byte
+	data     any
+	endpoint *string
 }
 
 // sources

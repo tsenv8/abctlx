@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"strconv"
 )
@@ -14,7 +13,7 @@ import (
 type AirbyteClient interface {
 	// General
 	GenerateAccessToken() (*AbctlxResponse, error)
-	HealthCheck() string
+	HealthCheck() (*AbctlxResponse, error)
 	GetURL(*string) string
 
 	//Sources
@@ -43,7 +42,7 @@ func (r *airbyteClient) GetURL(endpoint *string) string {
 
 func (c *airbyteClient) GenerateAccessToken() (*AbctlxResponse, error) {
 	endpoint := GENERATE_ACCESS_TOKEN_ENDPOINT
-	finalUrl := c.GetURL(&endpoint)
+	url := c.GetURL(&endpoint)
 
 	tokenRequest := GenerateAccessTokenRequest{
 		ClientId:  c.config.ClientId,
@@ -55,7 +54,7 @@ func (c *airbyteClient) GenerateAccessToken() (*AbctlxResponse, error) {
 		return nil, err
 	}
 
-	req, err := http.NewRequest("POST", finalUrl, bytes.NewBuffer(payload))
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(payload))
 	req.Header.Add("content-type", HEADER_CONTENT_TYPE)
 	req.Header.Add("accept", HEADER_CONTENT_TYPE)
 
@@ -72,26 +71,33 @@ func (c *airbyteClient) GenerateAccessToken() (*AbctlxResponse, error) {
 	body, _ := io.ReadAll(res.Body)
 
 	return &AbctlxResponse{
-		msg:  REQUEST_SUCCESS,
-		body: body,
+		msg:      REQUEST_SUCCESS,
+		body:     body,
+		endpoint: &url,
 	}, nil
 }
 
-func (c *airbyteClient) HealthCheck() string {
+func (c *airbyteClient) HealthCheck() (*AbctlxResponse, error) {
 	endpoint := HEALTH_CHECK_ENDPOINT
-	finalUrl := c.GetURL(&endpoint)
-	req, _ := http.NewRequest("GET", finalUrl, nil)
+	url := c.GetURL(&endpoint)
+	req, _ := http.NewRequest("GET", url, nil)
 
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		log.Fatal(err.Error())
+		return nil, fmt.Errorf(REQUEST_FAIL)
 	}
 
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return nil, fmt.Errorf(REQUEST_FAIL)
+	}
 
-	fmt.Println(string(body))
-	return string(body)
+	return &AbctlxResponse{
+		msg:      REQUEST_SUCCESS,
+		body:     body,
+		endpoint: &url,
+	}, nil
 }
 
 func (c *airbyteClient) ListSources() (*AbctlxResponse, error) {
@@ -111,8 +117,9 @@ func (c *airbyteClient) ListSources() (*AbctlxResponse, error) {
 
 	fmt.Println(string(body))
 	return &AbctlxResponse{
-		msg:  REQUEST_SUCCESS,
-		body: body,
+		msg:      REQUEST_SUCCESS,
+		body:     body,
+		endpoint: &url,
 	}, nil
 }
 
@@ -175,8 +182,9 @@ func (c *airbyteClient) CreateSource(params CreateSourceParams) (*AbctlxResponse
 	body, _ := io.ReadAll(res.Body)
 
 	return &AbctlxResponse{
-		msg:  REQUEST_SUCCESS,
-		body: body,
+		msg:      REQUEST_SUCCESS,
+		body:     body,
+		endpoint: &url,
 	}, nil
 }
 
@@ -205,8 +213,9 @@ func (c *airbyteClient) ListWorkspaces() (*AbctlxResponse, error) {
 
 	fmt.Println(string(body))
 	return &AbctlxResponse{
-		msg:  REQUEST_SUCCESS,
-		body: body,
-		data: listWorkspacesResponse,
+		msg:      REQUEST_SUCCESS,
+		body:     body,
+		data:     listWorkspacesResponse,
+		endpoint: &url,
 	}, nil
 }
