@@ -122,6 +122,10 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
 	}
 
+	if req != nil {
+		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
+	}
+
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
 		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Sources", err)
