@@ -122,7 +122,7 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
 	}
 
-	if req != nil {
+	if req == nil {
 		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
 	}
 
