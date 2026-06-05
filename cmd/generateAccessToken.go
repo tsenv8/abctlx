@@ -14,7 +14,7 @@ var generateAccessTokenCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		output, err := airbyte.New(config.Data).GenerateAccessToken()
 		if err != nil {
-			log.Fatal(err)
+			log.Fatal("ERROR: " + err.Error())
 		}
 
 		fmt.Println(output)

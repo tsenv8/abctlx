@@ -70,11 +70,13 @@ func (c *airbyteClient) GenerateAccessToken() (*AbctlxResponse, error) {
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
-	return &AbctlxResponse{
+	response := &AbctlxResponse{
 		msg:      REQUEST_SUCCESS,
 		body:     body,
 		endpoint: &url,
-	}, nil
+	}
+
+	return response, nil
 }
 
 func (c *airbyteClient) HealthCheck() (*AbctlxResponse, error) {
