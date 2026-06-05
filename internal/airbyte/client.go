@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -81,7 +82,10 @@ func (ac *airbyteClient) Request(
 	}
 
 	//headers and tokens
-	req.Header.Set("Content-Type", HEADER_CONTENT_TYPE)
+	if buf != nil {
+		req.Header.Set("Content-Type", HEADER_CONTENT_TYPE)
+	}
+	
 	req.Header.Set("Accept", HEADER_CONTENT_TYPE)
 	if ac.AccessToken != nil {
 		req.Header.Set("Authorization", "Bearer "+*ac.AccessToken)
@@ -94,7 +98,8 @@ func (ac *airbyteClient) Request(
 	defer res.Body.Close()
 
 	if res.StatusCode >= 400 {
-		return nil, err
+		errBody, _ := io.ReadAll(res.Body)
+		return nil, fmt.Errorf("API Error: %s", string(errBody))
 	}
 
 	//res.Body reading

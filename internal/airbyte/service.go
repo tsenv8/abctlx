@@ -4,7 +4,6 @@ import (
 	"abctlx/internal/config"
 	"context"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 )
@@ -120,13 +119,13 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
+		NewAirbyteError(REQUEST_FAIL, "List Sources", err).Print()
 	}
 
 	if req == nil {
-		NewAirbyteError(REQUEST_FAIL, "List Sources", err)
+		NewAirbyteError(REQUEST_FAIL, "List Sources", err).Print()
 	}
-	fmt.Println(req)
+
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
 		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Sources", err)
