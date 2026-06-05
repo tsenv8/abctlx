@@ -11,6 +11,7 @@ import (
 type AirbyteService interface {
 	// General
 	GenerateAccessToken() *GenerateAccessTokenResponse
+	SetClientToken()
 	Health() *HealthCheckResponse
 
 	//Sources
@@ -45,6 +46,7 @@ func (s *airbyteService) ListWorkspaces() *ListWorkspacesResponse {
 		http.MethodGet,
 		LIST_WORKSPACES_ENDPOINT,
 		nil,
+		nil,
 	)
 	if err != nil {
 		NewAirbyteError(REQUEST_FAIL, "List Workspaces", err).Print()
@@ -61,6 +63,7 @@ func (s *airbyteService) ListWorkspaces() *ListWorkspacesResponse {
 func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceResponse {
 	var response CreateSourceResponse
 	workspaceId := s.GetWorkspaceId()
+	token := s.GetAccessToken()
 
 	cdcReplicationMethod := CDCReplicationMethodParameter{
 		Method:          "CDC",
@@ -95,6 +98,7 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 		http.MethodPost,
 		CREATE_SOURCE_ENDPOINT,
 		requestBody,
+		&token,
 	)
 
 	if err != nil {
@@ -111,11 +115,14 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 
 func (s *airbyteService) ListSources() *ListSourcesResponse {
 	var response ListSourcesResponse
+	token := s.GetAccessToken()
+
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodGet,
 		LIST_SOURCES_ENDPOINT,
 		nil,
+		&token,
 	)
 
 	if err != nil {
@@ -139,6 +146,7 @@ func (s *airbyteService) Health() *HealthCheckResponse {
 		s.ctx,
 		http.MethodGet,
 		HEALTH_CHECK_ENDPOINT,
+		nil,
 		nil,
 	)
 
@@ -167,6 +175,7 @@ func (s *airbyteService) GenerateAccessToken() *GenerateAccessTokenResponse {
 		http.MethodPost,
 		GENERATE_ACCESS_TOKEN_ENDPOINT,
 		tokenRequest,
+		nil,
 	)
 
 	if err != nil {
@@ -179,4 +188,10 @@ func (s *airbyteService) GenerateAccessToken() *GenerateAccessTokenResponse {
 	}
 
 	return &response
+}
+
+func (s *airbyteService) GetAccessToken() string {
+	res := s.GenerateAccessToken()
+	s.client.SetToken(res.AccessToken)
+	return s.client.GetToken()
 }

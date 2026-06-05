@@ -16,9 +16,11 @@ type AirbyteClient interface {
 	// General
 	// GenerateAccessToken() (*AbctlxResponse, error)
 	// HealthCheck() (*AbctlxResponse, error)
-	Request(ctx context.Context, method string, endpoint string, requestBody any) (*AbctlxResponse, error)
+	Request(ctx context.Context, method string, endpoint string, requestBody any, token *string) (*AbctlxResponse, error)
 	GetURL(endpoint *string) string
 	GetConfig() config.AirbyteConfig
+	SetToken(string) string
+	GetToken() string
 
 	//Sources
 	// ListSources() (*AbctlxResponse, error)
@@ -56,11 +58,21 @@ func (ac *airbyteClient) GetConfig() config.AirbyteConfig {
 	return ac.Config
 }
 
+func (c *airbyteClient) SetToken(token string) string {
+	c.AccessToken = &token
+	return *c.AccessToken
+}
+
+func (c *airbyteClient) GetToken() string {
+	return *c.AccessToken
+}
+
 func (ac *airbyteClient) Request(
 	ctx context.Context,
 	method string,
 	endpoint string,
 	requestBody any,
+	token *string,
 ) (*AbctlxResponse, error) {
 	var buf io.Reader
 
@@ -85,10 +97,10 @@ func (ac *airbyteClient) Request(
 	if buf != nil {
 		req.Header.Set("Content-Type", HEADER_CONTENT_TYPE)
 	}
-	
+
 	req.Header.Set("Accept", HEADER_CONTENT_TYPE)
-	if ac.AccessToken != nil {
-		req.Header.Set("Authorization", "Bearer "+*ac.AccessToken)
+	if token != nil {
+		req.Header.Set("Authorization", "Bearer "+*token)
 	}
 
 	res, err := ac.Http.Do(req)
