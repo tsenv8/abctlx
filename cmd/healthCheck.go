@@ -4,6 +4,7 @@ import (
 	"abctlx/internal/airbyte"
 	"abctlx/internal/config"
 	"fmt"
+	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -11,7 +12,11 @@ import (
 var healthCheckCmd = &cobra.Command{
 	Use: "health",
 	Run: func(cmd *cobra.Command, args []string) {
-		output := airbyte.New(config.Data).HealthCheck()
+		output, err := airbyte.New(config.Data).HealthCheck()
+		if err != nil {
+			log.Fatal("ERROR: " + err.Error())
+		}
+
 		fmt.Println(output)
 	},
 }
