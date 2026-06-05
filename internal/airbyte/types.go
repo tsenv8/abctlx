@@ -14,16 +14,37 @@ type CreateSourceRequest struct {
 	Configuration PostgresConfigurationParameter `json:"configuration"`
 }
 
+type CreateSourceResponse struct {
+	SourceId      string `json:"sourceId"`
+	Name          string `json:"name"`
+	SourceType    string `json:"sourceType"`
+	WorkspaceId   string `json:"workspaceId"`
+	Configuration any    `json:"configuration"`
+}
+
 type CreateSourceParams struct {
-	name            string
-	hostName        string
-	dbName          string
-	username        string
-	password        string
-	replicationSlot string
-	publicationName string
-	schemas         []string
-	port            int
+	Name            string
+	HostName        string
+	DBName          string
+	Username        string
+	Password        string
+	ReplicationSlot string
+	PublicationName string
+	Schemas         []string
+	Port            int
+}
+
+type ListSourcesResponse struct {
+	Next     string            `json:"next"`
+	Previous string            `json:"previous"`
+	Data     []ListSourcesData `json:"data"`
+}
+
+type ListSourcesData struct {
+	SourceId    string `json:"sourceId"`
+	Name        string `json:"name"`
+	SourceType  string `json:"sourceType"`
+	WorkspaceId string `json:"workspaceId"`
 }
 
 type PostgresConfigurationParameter struct {
@@ -70,9 +91,9 @@ type HealthCheckResponse struct {
 
 // workspaces
 type ListWorkspacesResponse struct {
-	Next     string
-	Previous string
-	Data     []WorkspaceData
+	Next     string          `json:"next"`
+	Previous string          `json:"previous"`
+	Data     []WorkspaceData `json:"data"`
 }
 
 type WorkspaceData struct {

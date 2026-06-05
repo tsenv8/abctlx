@@ -12,6 +12,7 @@ type AirbyteConfig struct {
 	ClientKey string `mapstructure:"ABCTLX_AB_CK"`
 	Port      int    `mapstructure:"ABCTLX_AB_PORT"`
 	API_URL   string `mapstructure:"ABCTLX_AB_API_URL"`
+	// DEBUG     bool   `mapstructure:"ABCTLX_DEBUG"`
 }
 
 var Data AirbyteConfig

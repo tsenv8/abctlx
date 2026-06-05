@@ -4,7 +4,6 @@ import (
 	"abctlx/internal/airbyte"
 	"context"
 	"fmt"
-	"log"
 
 	"github.com/spf13/cobra"
 )
@@ -13,10 +12,7 @@ var healthCheckCmd = &cobra.Command{
 	Use: "health",
 	Run: func(cmd *cobra.Command, args []string) {
 		var status string
-		res, err := airbyte.NewAirbyteService(context.Background()).Health()
-		if err != nil {
-			log.Fatal("ERROR:" + err.Error())
-		}
+		res := airbyte.NewAirbyteService(context.Background()).Health()
 
 		if res.Status {
 			status = "true"
