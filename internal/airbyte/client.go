@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -76,6 +77,7 @@ func (c *airbyteClient) GenerateAccessToken() (*AbctlxResponse, error) {
 		endpoint: &url,
 	}
 
+	log.Println(payload)
 	return response, nil
 }
 
