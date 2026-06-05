@@ -28,6 +28,7 @@ var createSourcesCmd = &cobra.Command{
 
 func init() {
 	//create
+	rootCmd.AddCommand(sourcesCmd)
 	sourcesCmd.AddCommand(createSourcesCmd)
 	createSourcesCmd.Flags().StringVar(&parameters.Name, "name", "sourcedb", "Source Name")
 	createSourcesCmd.Flags().StringVar(&parameters.DBName, "db", "postgres", "Database Name")
