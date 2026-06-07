@@ -22,6 +22,12 @@ type CreateSourceResponse struct {
 	Configuration any    `json:"configuration"`
 }
 
+type UpdateSourceRequest struct {
+	sourceName   string `json:"sourceName"`
+	sourceId     string `json:"sourceId"`
+	updateFields any
+}
+
 type CreateSourceParams struct {
 	Name            string
 	HostName        string

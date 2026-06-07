@@ -4,8 +4,8 @@ import (
 	"abctlx/internal/config"
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
+	"slices"
 )
 
 type AirbyteService interface {
@@ -40,13 +40,13 @@ func (s *airbyteService) GetWorkspaceId() *string {
 
 func (s *airbyteService) ListWorkspaces() *ListWorkspacesResponse {
 	var response ListWorkspacesResponse
-
+	token := s.GetAccessToken()
 	res, err := s.client.Request(
 		s.ctx,
 		http.MethodGet,
 		LIST_WORKSPACES_ENDPOINT,
 		nil,
-		nil,
+		&token,
 	)
 	if err != nil {
 		NewAirbyteError(REQUEST_FAIL, "List Workspaces", err).Print()
@@ -73,14 +73,16 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	}
 
 	sourcePostgresConf := PostgresConfigurationParameter{
-		SourceType:        "postgres",
-		Host:              params.HostName,
-		Port:              params.Port,
-		Database:          params.DBName,
-		Schemas:           params.Schemas,
-		Username:          params.Username,
-		Password:          params.Password,
-		SSlMode:           nil,
+		SourceType: "postgres",
+		Host:       params.HostName,
+		Port:       params.Port,
+		Database:   params.DBName,
+		Schemas:    params.Schemas,
+		Username:   params.Username,
+		Password:   params.Password,
+		SSlMode: &SSLModeParameter{
+			Mode: "disable",
+		},
 		ReplicationMethod: cdcReplicationMethod,
 		TunnelMethod: TunnelMethodParameter{
 			TunnelMethod: "NO_TUNNEL",
@@ -113,6 +115,33 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	return &response
 }
 
+func (s *airbyteService) UpdateSource(params CreateSourceParams) *CreateSourceResponse {
+	token := s.GetAccessToken()
+	sources := s.ListSources().Data
+
+	// sources.Data
+	if len(sources) != 0{
+		slices.IndexFunc()
+	}
+	// sources.Data
+	// for _, source := range sources.Data {
+
+	// }
+
+	req, err := s.client.Request(
+		s.ctx,
+		"PUT",
+		UPDATE_SOURCE_ENDPOINT+"/",
+		params,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Update Source", err).Print()
+	}
+
+}
+
 func (s *airbyteService) ListSources() *ListSourcesResponse {
 	var response ListSourcesResponse
 	token := s.GetAccessToken()
@@ -142,7 +171,7 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 }
 
 func (s *airbyteService) Health() *HealthCheckResponse {
-	res, err := s.client.Request(
+	_, err := s.client.Request(
 		s.ctx,
 		http.MethodGet,
 		HEALTH_CHECK_ENDPOINT,
@@ -156,7 +185,6 @@ func (s *airbyteService) Health() *HealthCheckResponse {
 		}
 	}
 
-	log.Println(res)
 	return &HealthCheckResponse{
 		Status: true,
 	}

@@ -9,7 +9,8 @@ import (
 )
 
 var healthCheckCmd = &cobra.Command{
-	Use: "health",
+	Use:   "health",
+	Short: "Health Check for the API",
 	Run: func(cmd *cobra.Command, args []string) {
 		var status string
 		res := airbyte.NewAirbyteService(context.Background()).Health()

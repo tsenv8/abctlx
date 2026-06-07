@@ -9,7 +9,8 @@ import (
 )
 
 var generateAccessTokenCmd = &cobra.Command{
-	Use: "token",
+	Use:   "token",
+	Short: "Generates an access token using Airbyte credentials.",
 	Run: func(cmd *cobra.Command, args []string) {
 		ctx := context.Background()
 
