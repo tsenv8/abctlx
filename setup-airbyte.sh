@@ -1,8 +1,4 @@
-# check sudo
-if [[ $EUID -ne 0 ]]; then
-   echo "This script must be run with sudo"
-   exit 1
-fi
+
 
 # load .env
 SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
