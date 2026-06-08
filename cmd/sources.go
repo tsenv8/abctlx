@@ -5,6 +5,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
@@ -31,19 +32,53 @@ var updateSourceCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates source",
 	Run: func(cmd *cobra.Command, args []string) {
-		updateParams := airbyte.CreateSourceParams{}
+		updateParams := airbyte.UpdateSourceRequest{
+			Configuration: &airbyte.UpdateSourceFields{},
+		}
+
 		CheckUpdateSourcesFlags(cmd, &updateParams)
-		// airbyte.NewAirbyteService(context.Background()).CreateSource(parameters)
+		tsn, err := cmd.Flags().GetString("target-source")
+		if err != nil {
+			airbyte.NewAirbyteError("Field Required", "Target Source Name", err).Print()
+		}
+
+		res := airbyte.NewAirbyteService(context.Background()).UpdateSource(&updateParams, tsn)
+		fmt.Println(res)
+	},
+}
+
+var deleteSourceCmd = &cobra.Command{
+	Use:   "delete",
+	Short: "Delete source using source name.",
+	Run: func(cmd *cobra.Command, args []string) {
+
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			airbyte.NewAirbyteError("Field Required", "Delete Source Name", err).Print()
+		}
+
+		success := airbyte.NewAirbyteService(context.Background()).DeleteSource(name)
+		if success {
+			pretty.Print("Deletion Successful")
+		}
 	},
 }
 
 func init() {
-	//create
 	rootCmd.AddCommand(sourcesCmd)
 	sourcesCmd.AddCommand(createSourcesCmd)
 	sourcesCmd.AddCommand(updateSourceCmd)
+	sourcesCmd.AddCommand(deleteSourceCmd)
 	createSourcesFlags()
 	updateSourcesFlags()
+	deleteSourcesFlags()
+}
+
+func deleteSourcesFlags() string {
+	cmd := deleteSourceCmd
+	var sourceName string
+	cmd.Flags().String("name", "", "The target source")
+	return sourceName
 }
 
 func createSourcesFlags() {
@@ -59,44 +94,94 @@ func createSourcesFlags() {
 	cmd.Flags().IntVar(&parameters.Port, "port", 2499, "Connection Port")
 }
 
-func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.CreateSourceParams) {
+func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSourceRequest) {
+	conf := updateParams.Configuration
+	errorField := "Update Sources Cmd"
+	errorMsg := "Update Failed"
 
-	// 2. Manually check which flags were actually passed by the user
 	if f := cmd.Flags().Lookup("name"); f != nil && f.Changed {
-		updateParams.Name, _ = cmd.Flags().GetString("name")
+		name, err := cmd.Flags().GetString("name")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		updateParams.SourceName = name
 	}
+
 	if f := cmd.Flags().Lookup("db"); f != nil && f.Changed {
-		updateParams.DBName, _ = cmd.Flags().GetString("db")
+		dbName, err := cmd.Flags().GetString("db")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.DBName = dbName
 	}
 	if f := cmd.Flags().Lookup("host"); f != nil && f.Changed {
-		updateParams.HostName, _ = cmd.Flags().GetString("host")
+		hostName, err := cmd.Flags().GetString("host")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.HostName = hostName
 	}
+
 	if f := cmd.Flags().Lookup("pw"); f != nil && f.Changed {
-		updateParams.Password, _ = cmd.Flags().GetString("pw")
+		password, err := cmd.Flags().GetString("pw")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.Password = password
 	}
 	if f := cmd.Flags().Lookup("pub"); f != nil && f.Changed {
-		updateParams.PublicationName, _ = cmd.Flags().GetString("pub")
+		publicationName, err := cmd.Flags().GetString("pub")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+
+		}
+		conf.ReplicationMethod.Publication = publicationName
+
 	}
 	if f := cmd.Flags().Lookup("rep"); f != nil && f.Changed {
-		updateParams.ReplicationSlot, _ = cmd.Flags().GetString("rep")
+		repSlotName, err := cmd.Flags().GetString("rep")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.ReplicationMethod.ReplicationSlot = repSlotName
 	}
 	if f := cmd.Flags().Lookup("user"); f != nil && f.Changed {
-		updateParams.Username, _ = cmd.Flags().GetString("user")
+		username, err := cmd.Flags().GetString("user")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.Username = username
 	}
 	if f := cmd.Flags().Lookup("schema"); f != nil && f.Changed {
-		updateParams.Schemas, _ = cmd.Flags().GetStringSlice("schema")
+		schemas, _ := cmd.Flags().GetStringSlice("schema")
+		if schemas == nil {
+			schemas = []string{}
+		}
+		conf.Schemas = schemas
 	}
+
 	if f := cmd.Flags().Lookup("port"); f != nil && f.Changed {
-		updateParams.Port, _ = cmd.Flags().GetInt("port")
+		port, err := cmd.Flags().GetInt("port")
+		if err != nil {
+			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+		}
+
+		conf.Port = port
 	}
 
 	fmt.Printf("Updating only these fields: %+v\n", updateParams)
-	// airbyte.NewAirbyteService(context.Background()).UpdateSource(updateParams)
 }
 
 func updateSourcesFlags() {
 
 	cmd := updateSourceCmd
+	cmd.Flags().String("target-source", "", "Target Source Name")
 	cmd.Flags().String("name", "", "Source Name")
 	cmd.Flags().String("db", "", "Database Name")
 	cmd.Flags().String("host", "", "Database Host Name")
@@ -104,17 +189,6 @@ func updateSourcesFlags() {
 	cmd.Flags().String("pub", "", "Airbyte Publication Name")
 	cmd.Flags().String("rep", "", "Airbyte Replication Slot Name")
 	cmd.Flags().String("user", "", "Database Username")
-	cmd.Flags().StringSlice("schema", []string{}, "Database Schemas")
+	cmd.Flags().StringSlice("schema", []string{"public"}, "Database Schemas")
 	cmd.Flags().Int("port", 2499, "Connection Port")
-
-	// cmd := updateSourceCmd
-	// cmd.Flags().StringVar(&parameters.Name, "name", "" , "Source Name")
-	// cmd.Flags().StringVar(&parameters.DBName, "db", "", "Database Name")
-	// cmd.Flags().StringVar(&parameters.HostName, "host", "", "Database Host Name")
-	// cmd.Flags().StringVar(&parameters.Password, "pw", "", "Database Password")
-	// cmd.Flags().StringVar(&parameters.PublicationName, "pub", "", "Airbyte Publication Name")
-	// cmd.Flags().StringVar(&parameters.ReplicationSlot, "rep", "", "Airbyte Replication Slot Name")
-	// cmd.Flags().StringVar(&parameters.Username, "user", "", "Database Username")
-	// cmd.Flags().StringSliceVar(&parameters.Schemas, "schema", []string{}, "Database Schemas")
-	// cmd.Flags().IntVar(&parameters.Port, "port", 0, "Connection Port")
 }

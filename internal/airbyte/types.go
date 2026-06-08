@@ -5,6 +5,7 @@ type AbctlxResponse struct {
 	Body     []byte
 	Data     any
 	Endpoint *string
+	Status   int
 }
 
 // sources
@@ -23,9 +24,29 @@ type CreateSourceResponse struct {
 }
 
 type UpdateSourceRequest struct {
-	sourceName   string `json:"sourceName"`
-	sourceId     string `json:"sourceId"`
-	updateFields any
+	SourceName    string              `json:"name,omitempty"`
+	WorkspaceId   string              `json:"workspaceId,omitempty"`
+	Configuration *UpdateSourceFields `json:"configuration,omitempty"`
+}
+
+type UpdateSourceFields struct {
+	SourceType        string                         `json:"sourceType"`
+	HostName          string                         `json:"host,omitempty"`
+	Port              int                            `json:"port,omitempty"`
+	DBName            string                         `json:"database,omitempty"`
+	Username          string                         `json:"username,omitempty"`
+	Password          string                         `json:"password,omitempty"`
+	Schemas           []string                       `json:"schemas,omitempty"`
+	SSLMode           *SSLModeParameter              `json:"ssl_mode"`
+	ReplicationMethod *CDCReplicationMethodParameter `json:"replication_method"`
+	TunnelMethod      *TunnelMethodParameter         `json:"tunnel_method"`
+}
+
+type UpdateSourceResponse struct {
+	SourceId    string `json:"sourceId"`
+	Name        string `json:"name"`
+	SourceType  string `json:"sourceType"`
+	WorkspaceId string `json:"workspaceId"`
 }
 
 type CreateSourceParams struct {
@@ -67,10 +88,10 @@ type PostgresConfigurationParameter struct {
 }
 
 type CDCReplicationMethodParameter struct {
-	Method          string `json:"method"`
-	Plugin          string `json:"plugin"`
-	ReplicationSlot string `json:"replication_slot"`
-	Publication     string `json:"publication"`
+	Method          string `json:"method,omitempty"`
+	Plugin          string `json:"plugin,omitempty"`
+	ReplicationSlot string `json:"replication_slot,omitempty"`
+	Publication     string `json:"publication,omitempty"`
 }
 
 type SSLModeParameter struct {

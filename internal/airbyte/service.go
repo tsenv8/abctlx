@@ -4,8 +4,10 @@ import (
 	"abctlx/internal/config"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net/http"
-	"slices"
+
+	"github.com/kr/pretty"
 )
 
 type AirbyteService interface {
@@ -16,11 +18,13 @@ type AirbyteService interface {
 
 	//Sources
 	CreateSource() *CreateSourceResponse
-	// ListSources() (*AbctlxResponse, error)
+	ListSources() (*AbctlxResponse, error)
+	GetSourceId()
 
 	//Workspace
 	ListWorkspaces() *ListWorkspacesResponse
 }
+
 type airbyteService struct {
 	ctx    context.Context
 	client AirbyteClient
@@ -115,23 +119,24 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	return &response
 }
 
-func (s *airbyteService) UpdateSource(params CreateSourceParams) *CreateSourceResponse {
+func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, targetsource string) *UpdateSourceResponse {
+	response := UpdateSourceResponse{}
 	token := s.GetAccessToken()
-	sources := s.ListSources().Data
+	sourceId, err := s.GetSourceId(targetsource)
 
-	// sources.Data
-	if len(sources) != 0{
-		slices.IndexFunc()
+	if err != nil {
+		NewAirbyteError("No such source found.", "Source Id", err).Print()
 	}
-	// sources.Data
-	// for _, source := range sources.Data {
 
-	// }
+	if sourceId == nil {
+		NewAirbyteError("No such source found.", "Source Id", nil).Print()
+	}
 
+	pretty.Print(params)
 	req, err := s.client.Request(
 		s.ctx,
-		"PUT",
-		UPDATE_SOURCE_ENDPOINT+"/",
+		http.MethodPatch,
+		SOURCES_ENDPOINT+"/"+*sourceId,
 		params,
 		&token,
 	)
@@ -140,6 +145,38 @@ func (s *airbyteService) UpdateSource(params CreateSourceParams) *CreateSourceRe
 		NewAirbyteError(REQUEST_FAIL, "Update Source", err).Print()
 	}
 
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Source", err).Print()
+	}
+
+	return &response
+}
+
+func (s *airbyteService) DeleteSource(sourceName string) bool {
+	token := s.GetAccessToken()
+	sourceId, err := s.GetSourceId(sourceName)
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Source Id", err).Print()
+	}
+
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodDelete,
+		SOURCES_ENDPOINT+"/"+*sourceId,
+		nil,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Delete Source", err).Print()
+	}
+
+	if req.Status >= 400 {
+		return false
+	}
+
+	return true
 }
 
 func (s *airbyteService) ListSources() *ListSourcesResponse {
@@ -222,4 +259,27 @@ func (s *airbyteService) GetAccessToken() string {
 	res := s.GenerateAccessToken()
 	s.client.SetToken(res.AccessToken)
 	return s.client.GetToken()
+}
+
+func (s *airbyteService) GetSourceId(name string) (*string, error) {
+	sources := s.ListSources()
+	var targetSource ListSourcesData
+	var sourceId *string
+
+	for _, source := range sources.Data {
+		if source.Name == name {
+			targetSource = source
+			sourceId = &source.SourceId
+			break
+		}
+	}
+
+	if sourceId == nil {
+		return nil, fmt.Errorf("Source ID not found.")
+	}
+
+	pretty.Print(name)
+	pretty.Print(targetSource)
+
+	return sourceId, nil
 }
