@@ -15,20 +15,11 @@ import (
 )
 
 type AirbyteClient interface {
-	// General
-	// GenerateAccessToken() (*AbctlxResponse, error)
-	// HealthCheck() (*AbctlxResponse, error)
 	Request(ctx context.Context, method string, endpoint string, requestBody any, token *string) (*AbctlxResponse, error)
 	GetURL(endpoint *string) string
 	GetConfig() config.AirbyteConfig
 	SetToken(string) string
 	GetToken() string
-
-	//Sources
-	// ListSources() (*AbctlxResponse, error)
-
-	//Workspace
-	// ListWorkspaces() (*AbctlxResponse, error)
 }
 
 type airbyteClient struct {
