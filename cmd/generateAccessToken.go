@@ -15,8 +15,8 @@ var generateAccessTokenCmd = &cobra.Command{
 		ctx := context.Background()
 
 		s := airbyte.NewAirbyteService(ctx)
-		res := s.GenerateAccessToken()
-		fmt.Printf("Token: %s", res.AccessToken)
+		token := s.GetAccessToken()
+		fmt.Printf("Token: %s", token)
 	},
 }
 
