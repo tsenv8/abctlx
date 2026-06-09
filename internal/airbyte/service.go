@@ -6,23 +6,41 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/kr/pretty"
 )
 
 type AirbyteService interface {
 	// General
-	GenerateAccessToken() *GenerateAccessTokenResponse
-	SetClientToken()
+	generateAccessToken() *GenerateAccessTokenResponse
+	GetAccessToken() string
 	Health() *HealthCheckResponse
 
 	//Sources
-	CreateSource() *CreateSourceResponse
-	ListSources() (*AbctlxResponse, error)
-	GetSourceId()
+	CreateSource(params CreateSourceParams) *CreateSourceResponse
+	UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse
+	DeleteSource(sourceName string) bool
+	ListSources() *ListSourcesResponse
+	GetSourceId(name string) (*SourceData, error)
+
+	//Destinations
+	CreateDestination(params CreateDestinationRequest) DestinationData
+	UpdateDestination(params UpdateDestinationRequest) DestinationData
+	DeleteDestination(destName string) bool
+	ListDestinations(limit int) ListDestinationResponse
+	GetDestination(destName string) DestinationData
+
+	//Connections
+	CreateConnection(params CreateConnectionRequest) ConnectionData
+	UpdateConnection(params UpdateConnectionRequest, connectionName string) ConnectionData
+	DeleteConnection(connectionName string) bool
+	ListConnections(limit *int) ListConnectionResponse
+	GetConnection(connectionName string) ConnectionData
 
 	//Workspace
 	ListWorkspaces() *ListWorkspacesResponse
+	GetWorkspaceId() *string
 }
 
 type airbyteService struct {
@@ -36,6 +54,264 @@ func NewAirbyteService(ctx context.Context) *airbyteService {
 		ctx:    ctx,
 		client: abClient,
 	}
+}
+
+// Connections
+func (s *airbyteService) GetConnection(connectionName string) ConnectionData {
+	connections := s.ListConnections(nil)
+	var targetConnection ConnectionData
+	for _, connection := range connections.Data {
+		if connection.Name == connectionName {
+			targetConnection = connection
+			break
+		}
+	}
+
+	pretty.Print(targetConnection)
+	return targetConnection
+}
+
+func (s *airbyteService) ListConnections(limit *int) ListConnectionResponse {
+	var response ListConnectionResponse
+	var endpoint string
+	token := s.GetAccessToken()
+
+	if limit != nil {
+		endpoint = CONNECTION_ENDPOINT + "?limit=" + strconv.Itoa(*limit)
+	} else {
+		endpoint = CONNECTION_ENDPOINT
+	}
+
+	res, err := s.client.Request(
+		s.ctx,
+		http.MethodGet,
+		endpoint,
+		nil,
+		&token,
+	)
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "List Connections", err)
+	}
+
+	err = json.Unmarshal(res.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Connections", err)
+	}
+
+	return response
+}
+
+func (s *airbyteService) DeleteConnection(connectionName string) bool {
+	token := s.GetAccessToken()
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodDelete,
+		CONNECTION_ENDPOINT,
+		nil,
+		&token,
+	)
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Delete Connection", err).Print()
+	}
+
+	if req.Status >= http.StatusBadRequest {
+		return false
+	}
+
+	return true
+}
+
+func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connectionName string) ConnectionData {
+	var response ConnectionData
+	token := s.GetAccessToken()
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodPatch,
+		CONNECTION_ENDPOINT+"/"+connectionName,
+		params,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Update Connection", err).Print()
+	}
+
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Connection", err).Print()
+	}
+
+	return response
+}
+
+func (s *airbyteService) CreateConnection(params CreateConnectionRequest) ConnectionData {
+	var response ConnectionData
+	token := s.GetAccessToken()
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodPost,
+		CONNECTION_ENDPOINT,
+		params,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Create Connection", err).Print()
+	}
+
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Create Connection", err).Print()
+	}
+
+	return response
+}
+
+// Destinations
+func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) DestinationData {
+	var response DestinationData
+	token := s.GetAccessToken()
+	dest := s.GetDestination(*flags.DestName)
+
+	config := DestinationConfigurationParameter{
+		Host:     *flags.Host,
+		Port:     *flags.Port,
+		Database: *flags.Database,
+		Username: *flags.Username,
+		Password: *flags.Password,
+	}
+
+	updateDestReq := UpdateDestinationRequest{
+		Name:          *flags.Name,
+		Configuration: config,
+	}
+
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodPatch,
+		DESTINATION_ENDPOINT+"/"+dest.DestinationId,
+		updateDestReq,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Update Destination", err).Print()
+	}
+
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Destination", err).Print()
+	}
+
+	return response
+}
+
+func (s *airbyteService) DeleteDestination(destName string) bool {
+	destination := s.GetDestination(destName)
+	token := s.GetAccessToken()
+	res, err := s.client.Request(
+		s.ctx,
+		http.MethodDelete,
+		DESTINATION_ENDPOINT+"/"+destination.DestinationId,
+		nil,
+		&token,
+	)
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Delete Destination", err)
+	}
+
+	if res.Status >= http.StatusBadRequest {
+		return false
+	}
+
+	return true
+}
+
+func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) DestinationData {
+	var response DestinationData
+	token := s.GetAccessToken()
+	workspaceId := s.GetWorkspaceId()
+
+	config := DestinationConfigurationParameter{
+		Host:     "localhost",
+		Port:     8123,
+		Database: "chdb",
+		Username: "default",
+		Password: "1",
+		TunnelMethod: TunnelMethodParameter{
+			TunnelMethod: "NO_TUNNEL",
+		},
+		DestinationType: "clickhouse",
+	}
+
+	createDestReq := CreateDestinationRequest{
+		Name:          flags.Name,
+		WorkspaceId:   *workspaceId,
+		Configuration: config,
+	}
+
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodPost,
+		DESTINATION_ENDPOINT,
+		createDestReq,
+		&token,
+	)
+
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "Create Destination", err).Print()
+	}
+
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Create Destination", err).Print()
+	}
+
+	return response
+}
+
+func (s *airbyteService) GetDestination(destName string) DestinationData {
+	destinations := s.ListDestinations(nil)
+	var targetDestination DestinationData
+	for _, destination := range destinations.Data {
+		if destination.Name == destName {
+			targetDestination = destination
+			break
+		}
+	}
+
+	pretty.Print(targetDestination)
+	return targetDestination
+}
+
+func (s *airbyteService) ListDestinations(limit *int) ListDestinationResponse {
+	var response ListDestinationResponse
+	var finalEndpoint string
+	token := s.GetAccessToken()
+
+	if limit != nil {
+		finalEndpoint = DESTINATION_ENDPOINT + "?limit=" + strconv.Itoa(*limit)
+	} else {
+		finalEndpoint = DESTINATION_ENDPOINT
+	}
+
+	req, err := s.client.Request(
+		s.ctx,
+		http.MethodGet,
+		finalEndpoint,
+		nil,
+		&token,
+	)
+	if err != nil {
+		NewAirbyteError(REQUEST_FAIL, "List Destinations", err).Print()
+	}
+
+	err = json.Unmarshal(req.Body, &response)
+	if err != nil {
+		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Destinations", err).Print()
+	}
+
+	return response
 }
 
 func (s *airbyteService) GetWorkspaceId() *string {
@@ -102,7 +378,7 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	res, err := s.client.Request(
 		s.ctx,
 		http.MethodPost,
-		CREATE_SOURCE_ENDPOINT,
+		SOURCES_ENDPOINT,
 		requestBody,
 		&token,
 	)
@@ -119,16 +395,16 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	return &response
 }
 
-func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, targetsource string) *UpdateSourceResponse {
+func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse {
 	response := UpdateSourceResponse{}
 	token := s.GetAccessToken()
-	sourceId, err := s.GetSourceId(targetsource)
+	source, err := s.GetSourceId(sourceName)
 
 	if err != nil {
 		NewAirbyteError("No such source found.", "Source Id", err).Print()
 	}
 
-	if sourceId == nil {
+	if source.SourceId == "" {
 		NewAirbyteError("No such source found.", "Source Id", nil).Print()
 	}
 
@@ -136,7 +412,7 @@ func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, targetsource 
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodPatch,
-		SOURCES_ENDPOINT+"/"+*sourceId,
+		SOURCES_ENDPOINT+"/"+*&source.SourceId,
 		params,
 		&token,
 	)
@@ -155,7 +431,7 @@ func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, targetsource 
 
 func (s *airbyteService) DeleteSource(sourceName string) bool {
 	token := s.GetAccessToken()
-	sourceId, err := s.GetSourceId(sourceName)
+	source, err := s.GetSourceId(sourceName)
 	if err != nil {
 		NewAirbyteError(REQUEST_FAIL, "Source Id", err).Print()
 	}
@@ -163,7 +439,7 @@ func (s *airbyteService) DeleteSource(sourceName string) bool {
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodDelete,
-		SOURCES_ENDPOINT+"/"+*sourceId,
+		SOURCES_ENDPOINT+"/"+*&source.SourceId,
 		nil,
 		&token,
 	)
@@ -186,7 +462,7 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodGet,
-		LIST_SOURCES_ENDPOINT,
+		SOURCES_ENDPOINT,
 		nil,
 		&token,
 	)
@@ -227,7 +503,7 @@ func (s *airbyteService) Health() *HealthCheckResponse {
 	}
 }
 
-func (s *airbyteService) GenerateAccessToken() *GenerateAccessTokenResponse {
+func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	var response GenerateAccessTokenResponse
 	cfg := s.client.GetConfig()
 	tokenRequest := GenerateAccessTokenRequest{
@@ -256,20 +532,19 @@ func (s *airbyteService) GenerateAccessToken() *GenerateAccessTokenResponse {
 }
 
 func (s *airbyteService) GetAccessToken() string {
-	res := s.GenerateAccessToken()
+	res := s.generateAccessToken()
 	s.client.SetToken(res.AccessToken)
 	return s.client.GetToken()
 }
 
-func (s *airbyteService) GetSourceId(name string) (*string, error) {
+func (s *airbyteService) GetSourceId(name string) (*SourceData, error) {
 	sources := s.ListSources()
-	var targetSource ListSourcesData
+	var targetSource SourceData
 	var sourceId *string
 
 	for _, source := range sources.Data {
 		if source.Name == name {
 			targetSource = source
-			sourceId = &source.SourceId
 			break
 		}
 	}
@@ -278,8 +553,7 @@ func (s *airbyteService) GetSourceId(name string) (*string, error) {
 		return nil, fmt.Errorf("Source ID not found.")
 	}
 
-	pretty.Print(name)
 	pretty.Print(targetSource)
 
-	return sourceId, nil
+	return &targetSource, nil
 }
