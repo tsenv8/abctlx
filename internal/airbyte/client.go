@@ -82,8 +82,6 @@ func (ac *airbyteClient) Request(
 	//build url
 	url := ac.GetURL(&endpoint)
 
-	pretty.Print("\n Making a request with: [" + method + "]" + " " + url)
-
 	req, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {
 		return nil, err
@@ -105,7 +103,9 @@ func (ac *airbyteClient) Request(
 	}
 	defer res.Body.Close()
 
-	if res.StatusCode >= 400 {
+	pretty.Printf("\n [ %s ] [ %s ] - %s ", method, strconv.Itoa(res.StatusCode), url)
+
+	if res.StatusCode >= http.StatusBadRequest {
 		errBody, _ := io.ReadAll(res.Body)
 		return nil, fmt.Errorf("API Error: %s", string(errBody))
 	}

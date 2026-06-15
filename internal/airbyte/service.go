@@ -41,6 +41,8 @@ type AirbyteService interface {
 	//Workspace
 	ListWorkspaces() *ListWorkspacesResponse
 	GetWorkspaceId() *string
+
+	//Resources
 }
 
 type airbyteService struct {
@@ -54,6 +56,69 @@ func NewAirbyteService(ctx context.Context) *airbyteService {
 		ctx:    ctx,
 		client: abClient,
 	}
+}
+
+// Resources
+func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest) {
+	//check if connection id exists
+	connections := s.ListConnections(nil)
+	var connectionValid bool
+	connectionValid = false
+	for _, connection := range connections.Data {
+		if connection.ConnectionId == params.ConnectionId {
+			connectionValid = true
+		}
+	}
+
+	if !connectionValid {
+		NewAirbyteError("Invalid Connection ID", "Connection Resource", nil).Print()
+	}
+
+	//check if minmax cpu is valid value
+	if params.MinCpuCores > 1 || params.MaxCpuCores > 1 {
+		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
+	}
+
+	//check if minmax memo is valid value
+	if params.MinMemGb > 1 || params.MaxMemGb > 1 {
+		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
+	}
+
+	maxMemoryMb := params.MaxMemGb * 1024
+	minMemoryMb := params.MinMemGb * 1024
+	maxMemoryMbStr := strconv.Itoa(maxMemoryMb) + "Mi"
+	minMemoryMbStr := strconv.Itoa(minMemoryMb) + "Mi"
+
+	// jsonResources := fmt.Sprintf(`{"cpu_limit": "%s", "cpu_request": "%s", "memory_limit": "%s", "memory_request": "%s"}`, 
+	// 	cpuLimit, cpuReq, memLimit, memReq)
+
+	// sqlQuery := fmt.Sprintf("UPDATE connection SET resource_requirements = '%s' WHERE id = '%s';", 
+	// 	jsonResources, connID)
+
+	// // You pass each argument as a separate element in a slice.
+	// args := []string{
+	// 	"exec", podName,
+	// 	"--kubeconfig=" + kubeconfig,
+	// 	"--namespace=" + namespace,
+	// 	"--", // The "Wall"
+	// 	"psql", "-U", "airbyte", "-d", "airbyte_db", "-c", sqlQuery,
+	// }
+
+	// fmt.Printf("Executing update for connection %s...\n", connID)
+
+	// // 4. Run the command
+	// cmd := exec.Command("kubectl", args...)
+	
+	// // Capture the output and errors
+	// out, err := cmd.CombinedOutput()
+	// if err != nil {
+	// 	log.Fatalf("Command failed: %s\nError: %v", string(out), err)
+	// }
+
+	// fmt.Printf("Success:\n%s\n", string(out))
+
+	//format minmax memo
+	//do command
 }
 
 // Connections
@@ -171,25 +236,49 @@ func (s *airbyteService) CreateConnection(params CreateConnectionRequest) Connec
 func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) DestinationData {
 	var response DestinationData
 	token := s.GetAccessToken()
-	dest := s.GetDestination(*flags.DestName)
+	dest := s.GetDestination(flags.DestName)
+
+	if dest.DestinationId == "" {
+		NewAirbyteError(REQUEST_FAIL, "Update Destination", fmt.Errorf("No Destination Object Found")).Print()
+	}
+
+	// if flags.Host != "" {
+	// 	config.Host = flags.Host
+	// }
+
+	// if flags.Port != "" {
+	// 	config.Port = flags.Port
+	// }
+
+	// if flags.Database != "" {
+	// 	config.Database = flags.Database
+	// }
+
+	// if flags.Username != "" {
+	// 	config.Username = flags.Username
+	// }
+
+	// if flags.Username != "" {
+	// 	config.Password = flags.Password
+	// }
 
 	config := DestinationConfigurationParameter{
-		Host:     *flags.Host,
-		Port:     *flags.Port,
-		Database: *flags.Database,
-		Username: *flags.Username,
-		Password: *flags.Password,
+		Host:     "",
+		Port:     "",
+		Database: "",
+		Username: "",
+		Password: "",
 	}
 
 	updateDestReq := UpdateDestinationRequest{
-		Name:          *flags.Name,
-		Configuration: config,
+		Name:          flags.Name,
+		Configuration: &config,
 	}
 
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodPatch,
-		DESTINATION_ENDPOINT+"/"+dest.DestinationId,
+		DESTINATION_ENDPOINT+dest.DestinationId,
 		updateDestReq,
 		&token,
 	)
@@ -229,19 +318,25 @@ func (s *airbyteService) DeleteDestination(destName string) bool {
 
 func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) DestinationData {
 	var response DestinationData
+	var config DestinationConfigurationParameter
 	token := s.GetAccessToken()
 	workspaceId := s.GetWorkspaceId()
 
-	config := DestinationConfigurationParameter{
-		Host:     "localhost",
-		Port:     8123,
-		Database: "chdb",
-		Username: "default",
-		Password: "1",
-		TunnelMethod: TunnelMethodParameter{
-			TunnelMethod: "NO_TUNNEL",
-		},
-		DestinationType: "clickhouse",
+	if flags.ConfigType == "clickhouse" {
+		config = DestinationConfigurationParameter{
+			Host:     "localhost",
+			Port:     "8123",
+			Database: "chdb",
+			Username: "default",
+			Protocol: "http",
+			Password: "1",
+			TunnelMethod: TunnelMethodParameter{
+				TunnelMethod: "NO_TUNNEL",
+			},
+			DestinationType: "clickhouse",
+		}
+	} else {
+		NewAirbyteError(REQUEST_FAIL, "Create Destination", fmt.Errorf("Failed to create config for %s", flags.Name)).Print()
 	}
 
 	createDestReq := CreateDestinationRequest{
