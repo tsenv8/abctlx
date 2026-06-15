@@ -16,21 +16,21 @@ var destCmd = &cobra.Command{
 		pretty.Print(res)
 	},
 }
-var createDestFlags *airbyte.CreateDestinationFlags
+var createDestFlags airbyte.CreateDestinationFlags
 var createDestCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates Destinations",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).CreateDestination(*createDestFlags)
+		res := airbyte.NewAirbyteService(context.Background()).CreateDestination(createDestFlags)
 		pretty.Print(res)
 	},
 }
-var updateDestFlags *airbyte.UpdateDestinationFlags
+var updateDestFlags airbyte.UpdateDestinationFlags
 var updateDestCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates an existing Destination using its Destination Id",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(*updateDestFlags)
+		res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(updateDestFlags)
 		pretty.Print(res)
 	},
 }
@@ -71,10 +71,9 @@ func createDestCmdFlags() {
 }
 
 func updateDestCmdFlags() {
-	updateDestCmd.Flags().StringVar(updateDestFlags.DestName, "destName", "", "The name of the destination to update.")
-	updateDestCmd.Flags().StringVar(updateDestFlags.Name, "name", "", "Change destination name")
-	updateDestCmd.Flags().StringVar(updateDestFlags.ConfigType, "configType", "", "Configuration type")
-
+	updateDestCmd.Flags().StringVar(&updateDestFlags.DestName, "destName", "", "The name of the destination to update.")
+	updateDestCmd.Flags().StringVar(&updateDestFlags.Name, "name", "", "Change destination name")
+	updateDestCmd.Flags().StringVar(&updateDestFlags.ConfigType, "configType", "", "Configuration type")
 }
 
 func deleteDestCmdFlags() {
