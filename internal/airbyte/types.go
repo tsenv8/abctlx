@@ -79,15 +79,15 @@ type CreateDestinationFlags struct {
 }
 
 type UpdateDestinationFlags struct {
-	DestName     *string
-	Name         *string
-	ConfigType   *string
-	Host         *string
-	Port         *int
-	Database     *string
-	Username     *string
-	Password     *string
-	TunnelMethod *string
+	DestName     string
+	Name         string
+	ConfigType   string
+	Host         string
+	Port         string
+	Database     string
+	Username     string
+	Password     string
+	TunnelMethod string
 }
 
 type CreateDestinationRequest struct {
@@ -98,17 +98,18 @@ type CreateDestinationRequest struct {
 
 type DestinationConfigurationParameter struct {
 	Host            string                `json:"host,omitempty"`
-	Port            int                   `json:"port,omitempty"`
+	Port            string                `json:"port,omitempty"`
 	Database        string                `json:"database,omitempty"`
+	Protocol        string                `json:"protocol,omitempty"`
 	Username        string                `json:"username,omitempty"`
 	Password        string                `json:"password,omitempty"`
-	TunnelMethod    TunnelMethodParameter `json:"tunnel_method,omitempty"`
+	TunnelMethod    TunnelMethodParameter `json:"tunnel_method"`
 	DestinationType string                `json:"destinationType,omitempty"`
 }
 
 type UpdateDestinationRequest struct {
-	Name          string                            `json:"name,omitempty"`
-	Configuration DestinationConfigurationParameter `json:"configuration"`
+	Name          string                             `json:"name,omitempty"`
+	Configuration *DestinationConfigurationParameter `json:"configuration"`
 }
 
 type ListDestinationResponse struct {
@@ -245,3 +246,15 @@ type WorkspaceData struct {
 	Name          string
 	DataResidency string
 }
+
+// Resources
+type UpdateConnectionResourceRequirementsRequest struct {
+	ConnectionId string
+	MinCpuCores  int
+	MaxCpuCores  int
+	MinMemGb     int
+	MaxMemGb     int
+}
+
+// type UpdateConnectionResourceResponse struct {
+// }
