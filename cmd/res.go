@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"abctlx/internal/airbyte"
+	"context"
 	"fmt"
 
 	"github.com/spf13/cobra"
@@ -20,7 +21,7 @@ var updateConResCmd = &cobra.Command{
 	Use:   "update-connection",
 	Short: "Edit Connection resources.",
 	Run: func(cmd *cobra.Command, args []string) {
-		//
+		airbyte.NewAirbyteService(context.Background()).UpdateConnectionResourceRequirement(&updateConResRequest)
 	},
 }
 

@@ -255,6 +255,12 @@ type UpdateConnectionResourceRequirementsRequest struct {
 	MinMemGb     int
 	MaxMemGb     int
 }
+type ResourceRequirements struct {
+	CPULimit      string `json:"cpu_limit"`
+	CPURequest    string `json:"cpu_request"`
+	MemoryLimit   string `json:"memory_limit"`
+	MemoryRequest string `json:"memory_request"`
+}
 
 // type UpdateConnectionResourceResponse struct {
 // }
