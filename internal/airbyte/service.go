@@ -130,8 +130,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		NewAirbyteError("Command Error", "Connection Resource", err).Print()
-		return
+		NewAirbyteError(string(output), "Connection Resource", err).Print()
 	}
 
 	fmt.Printf("Success:\n%s\n", string(output))
