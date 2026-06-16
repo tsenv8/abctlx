@@ -126,7 +126,9 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
-	fmt.Printf("\n Executing update for actor %s...\n", params.ConnectionId)
+	fmt.Printf("\n [COMMAND] Executing update for actor %s... \n", params.ConnectionId)
+	fmt.Printf("\n [COMMAND] Query: %s", sqlQuery)
+	fmt.Printf("\n [COMMAND] Args: %s", args)
 
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
