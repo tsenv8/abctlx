@@ -62,42 +62,51 @@ func NewAirbyteService(ctx context.Context) *airbyteService {
 
 // Resources
 func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest) {
-	// check if connection id exists
-	connections := s.ListConnections(nil)
-	var connectionValid bool = false
-	for _, connection := range connections.Data {
-		if connection.ConnectionId == params.ConnectionId {
-			connectionValid = true
+	actors := s.ListConnections(nil)
+	var actorValid bool = false
+	for _, actor := range actors.Data {
+		if actor.ConnectionId == params.ConnectionId {
+			actorValid = true
 			break
 		}
 	}
 
-	if !connectionValid {
-		NewAirbyteError("Invalid Connection ID", "Connection Resource", nil).Print()
+	if !actorValid {
+		NewAirbyteError("Invalid Actor ID", "Connection Resource", nil).Print()
+		return
 	}
 
 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
 		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
+		return
 	}
 
 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
 		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
+		return
 	}
 
-	// calculate memory strings
 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
 	minMemoryMbStr := strconv.Itoa(params.MinMemGb*1024) + "Mi"
 
-	resReqs := ResourceRequirements{
-		CPULimit:      strconv.Itoa(params.MaxCpuCores),
-		CPURequest:    strconv.Itoa(params.MinCpuCores),
-		MemoryLimit:   maxMemoryMbStr,
-		MemoryRequest: minMemoryMbStr,
+	config := ActorResourceConfig{
+		JobSpecific: []JobRequirement{
+			{
+				JobType: "sync",
+				ResourceRequirements: ResourceRequirements{
+					CPULimit:      strconv.Itoa(params.MaxCpuCores),
+					CPURequest:    strconv.Itoa(params.MinCpuCores),
+					MemoryLimit:   maxMemoryMbStr,
+					MemoryRequest: minMemoryMbStr,
+				},
+			},
+		},
 	}
 
-	jsonBytes, err := json.Marshal(resReqs)
+	jsonBytes, err := json.Marshal(config)
 	if err != nil {
 		NewAirbyteError("JSON Encoding Error", "Connection Resource", err).Print()
+		return
 	}
 	jsonResources := string(jsonBytes)
 
@@ -105,7 +114,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 	kubeConfig := os.Getenv("ABCTLX_AB_KUBECONFIG")
 	namespace := os.Getenv("ABCTLX_AB_NAMESPACE")
 
-	sqlQuery := fmt.Sprintf("UPDATE connection SET resource_requirements = '%s' WHERE id = '%s';",
+	sqlQuery := fmt.Sprintf("UPDATE actor_definition SET resource_requirements = '%s' WHERE id = '%s';",
 		jsonResources, params.ConnectionId)
 
 	args := []string{
@@ -116,7 +125,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", "airbyte_db", "-c", sqlQuery,
 	}
 
-	fmt.Printf("Executing update for connection %s...\n", params.ConnectionId)
+	fmt.Printf("\n Executing update for actor %s...\n", params.ConnectionId)
 
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
@@ -127,6 +136,73 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 
 	fmt.Printf("Success:\n%s\n", string(output))
 }
+
+// func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest) {
+// 	// check if connection id exists
+// 	connections := s.ListConnections(nil)
+// 	var connectionValid bool = false
+// 	for _, connection := range connections.Data {
+// 		if connection.ConnectionId == params.ConnectionId {
+// 			connectionValid = true
+// 			break
+// 		}
+// 	}
+
+// 	if !connectionValid {
+// 		NewAirbyteError("Invalid Connection ID", "Connection Resource", nil).Print()
+// 	}
+
+// 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
+// 		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
+// 	}
+
+// 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
+// 		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
+// 	}
+
+// 	// calculate memory strings
+// 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
+// 	minMemoryMbStr := strconv.Itoa(params.MinMemGb*1024) + "Mi"
+
+// 	resReqs := ResourceRequirements{
+// 		CPULimit:      strconv.Itoa(params.MaxCpuCores),
+// 		CPURequest:    strconv.Itoa(params.MinCpuCores),
+// 		MemoryLimit:   maxMemoryMbStr,
+// 		MemoryRequest: minMemoryMbStr,
+// 	}
+
+// 	jsonBytes, err := json.Marshal(resReqs)
+// 	if err != nil {
+// 		NewAirbyteError("JSON Encoding Error", "Connection Resource", err).Print()
+// 	}
+// 	jsonResources := string(jsonBytes)
+
+// 	podName := "airbyte-db-0"
+// 	kubeConfig := os.Getenv("ABCTLX_AB_KUBECONFIG")
+// 	namespace := os.Getenv("ABCTLX_AB_NAMESPACE")
+
+// 	sqlQuery := fmt.Sprintf("UPDATE connection SET resource_requirements = '%s' WHERE id = '%s';",
+// 		jsonResources, params.ConnectionId)
+
+// 	args := []string{
+// 		"exec", podName,
+// 		"--kubeconfig=" + kubeConfig,
+// 		"--namespace=" + namespace,
+// 		"--",
+// 		"psql", "-U", "airbyte", "-d", "airbyte_db", "-c", sqlQuery,
+// 	}
+
+// 	fmt.Printf("Executing update for connection %s...\n", params.ConnectionId)
+
+// 	cmd := exec.Command("kubectl", args...)
+// 	output, err := cmd.CombinedOutput()
+// 	if err != nil {
+// 		NewAirbyteError("Command Error", "Connection Resource", err).Print()
+// 		return
+// 	}
+
+// 	fmt.Printf("Success:\n%s\n", string(output))
+// }
 
 // Connections
 func (s *airbyteService) GetConnection(connectionName string) ConnectionData {

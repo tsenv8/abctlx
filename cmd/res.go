@@ -39,4 +39,3 @@ func editConCmdFlags() {
 	updateConResCmd.Flags().IntVar(&updateConResRequest.MaxMemGb, "max_mem", 0, "The Maximum RAM usage")
 }
 
-// -c "UPDATE connection SET resource_requirements = '{\"cpu_limit\": \"2\", \"cpu_request\": \"2\", \"memory_limit\": \"2048Mi\", \"memory_request\": \"2048Mi\"}' WHERE id = 'YOUR_ID_HERE';"
