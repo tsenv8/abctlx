@@ -261,15 +261,3 @@ type ResourceRequirements struct {
 	MemoryLimit   string `json:"memory_limit"`
 	MemoryRequest string `json:"memory_request"`
 }
-
-// type ActorResourceConfig struct {
-// 	JobSpecific []JobRequirement `json:"jobSpecific"`
-// }
-
-// type JobRequirement struct {
-// 	JobType              string               `json:"jobType"`
-// 	ResourceRequirements ResourceRequirements `json:"resourceRequirements"`
-// }
-
-// type UpdateConnectionResourceResponse struct {
-// }

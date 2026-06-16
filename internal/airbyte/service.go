@@ -1,6 +1,7 @@
 package airbyte
 
 import (
+	"abctlx/internal/abctlx"
 	"abctlx/internal/config"
 	"context"
 	"encoding/json"
@@ -17,6 +18,7 @@ type AirbyteService interface {
 	generateAccessToken() *GenerateAccessTokenResponse
 	GetAccessToken() string
 	Health() *HealthCheckResponse
+	GetClient() AirbyteClient
 
 	//Sources
 	CreateSource(params CreateSourceParams) *CreateSourceResponse
@@ -44,6 +46,7 @@ type AirbyteService interface {
 	GetWorkspaceId() *string
 
 	//Resources
+	UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest)
 }
 
 type airbyteService struct {
@@ -61,25 +64,25 @@ func NewAirbyteService(ctx context.Context) *airbyteService {
 
 // Resources
 func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest) {
-	actors := s.ListConnections(nil)
-	var actorValid bool = false
-	for _, actor := range actors.Data {
-		if actor.ConnectionId == params.ConnectionId {
-			actorValid = true
+	connections := s.ListConnections(nil)
+	var conValid bool = false
+	for _, con := range connections.Data {
+		if con.ConnectionId == params.ConnectionId {
+			conValid = true
 			break
 		}
 	}
 
-	if !actorValid {
-		NewAirbyteError("Invalid Actor ID", "Connection Resource", nil).Print()
+	if !conValid {
+		abctlx.Error("Invalid Connector ID", nil)
 	}
 
 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
-		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
+		abctlx.Error("Invalid Cpu Core Values", nil)
 	}
 
 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
-		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
+		abctlx.Error("Invalid Memory Values", nil)
 	}
 
 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
@@ -94,8 +97,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 
 	jsonBytes, err := json.Marshal(resourceRequirements)
 	if err != nil {
-		NewAirbyteError("JSON Encoding Error", "Connection Resource", err).Print()
-		return
+		abctlx.Error("JSON Encoding Error", err)
 	}
 
 	jsonResources := string(jsonBytes)
@@ -116,85 +118,18 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
-	fmt.Printf("\n [ COMMAND ] Executing update for connection %s... \n", params.ConnectionId)
-	fmt.Printf("\n [ COMMAND ] Query: %s", sqlQuery)
-	fmt.Printf("\n [ COMMAND ] Args: %s", args)
+	abctlx.Log("COMMAND", fmt.Sprintf("Executing update for connection %s... \n", params.ConnectionId))
+	abctlx.Log("COMMAND", fmt.Sprintf("Query: %s ", sqlQuery))
+	abctlx.Log("COMMAND", fmt.Sprintf("Args: %s", args))
 
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		NewAirbyteError(string(output), "Connection Resource", err).Print()
+		abctlx.Error(string(output), err)
 	}
 
 	fmt.Printf("Success:\n%s\n", string(output))
 }
-
-// func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConnectionResourceRequirementsRequest) {
-// 	// check if connection id exists
-// 	connections := s.ListConnections(nil)
-// 	var connectionValid bool = false
-// 	for _, connection := range connections.Data {
-// 		if connection.ConnectionId == params.ConnectionId {
-// 			connectionValid = true
-// 			break
-// 		}
-// 	}
-
-// 	if !connectionValid {
-// 		NewAirbyteError("Invalid Connection ID", "Connection Resource", nil).Print()
-// 	}
-
-// 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
-// 		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
-// 	}
-
-// 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
-// 		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
-// 	}
-
-// 	// calculate memory strings
-// 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
-// 	minMemoryMbStr := strconv.Itoa(params.MinMemGb*1024) + "Mi"
-
-// 	resReqs := ResourceRequirements{
-// 		CPULimit:      strconv.Itoa(params.MaxCpuCores),
-// 		CPURequest:    strconv.Itoa(params.MinCpuCores),
-// 		MemoryLimit:   maxMemoryMbStr,
-// 		MemoryRequest: minMemoryMbStr,
-// 	}
-
-// 	jsonBytes, err := json.Marshal(resReqs)
-// 	if err != nil {
-// 		NewAirbyteError("JSON Encoding Error", "Connection Resource", err).Print()
-// 	}
-// 	jsonResources := string(jsonBytes)
-
-// 	podName := "airbyte-db-0"
-// 	kubeConfig := os.Getenv("ABCTLX_AB_KUBECONFIG")
-// 	namespace := os.Getenv("ABCTLX_AB_NAMESPACE")
-
-// 	sqlQuery := fmt.Sprintf("UPDATE connection SET resource_requirements = '%s' WHERE id = '%s';",
-// 		jsonResources, params.ConnectionId)
-
-// 	args := []string{
-// 		"exec", podName,
-// 		"--kubeconfig=" + kubeConfig,
-// 		"--namespace=" + namespace,
-// 		"--",
-// 		"psql", "-U", "airbyte", "-d", "airbyte_db", "-c", sqlQuery,
-// 	}
-
-// 	fmt.Printf("Executing update for connection %s...\n", params.ConnectionId)
-
-// 	cmd := exec.Command("kubectl", args...)
-// 	output, err := cmd.CombinedOutput()
-// 	if err != nil {
-// 		NewAirbyteError("Command Error", "Connection Resource", err).Print()
-// 		return
-// 	}
-
-// 	fmt.Printf("Success:\n%s\n", string(output))
-// }
 
 // Connections
 func (s *airbyteService) GetConnection(connectionName string) ConnectionData {
@@ -230,12 +165,12 @@ func (s *airbyteService) ListConnections(limit *int) ListConnectionResponse {
 		&token,
 	)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "List Connections", err)
+		abctlx.Error("List Connections Request Failed", err)
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Connections", err)
+		abctlx.Error("List Connections JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -251,7 +186,7 @@ func (s *airbyteService) DeleteConnection(connectionName string) bool {
 		&token,
 	)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Delete Connection", err).Print()
+		abctlx.Error("Delete Connection Request Failed", err)
 	}
 
 	if req.Status >= http.StatusBadRequest {
@@ -273,12 +208,12 @@ func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connec
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Update Connection", err).Print()
+		abctlx.Error("Update Connection Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Connection", err).Print()
+		abctlx.Error("Update Connection JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -296,12 +231,12 @@ func (s *airbyteService) CreateConnection(params CreateConnectionRequest) Connec
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Create Connection", err).Print()
+		abctlx.Error("Create Connection Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Create Connection", err).Print()
+		abctlx.Error("Create Connection JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -314,7 +249,8 @@ func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) Destina
 	dest := s.GetDestination(flags.DestName)
 
 	if dest.DestinationId == "" {
-		NewAirbyteError(REQUEST_FAIL, "Update Destination", fmt.Errorf("No Destination Object Found")).Print()
+		abctlx.Error("Update Destination Request Failed", nil)
+		// NewAirbyteError(REQUEST_FAIL, "Update Destination", fmt.Errorf("No Destination Object Found")).Print()
 	}
 
 	// if flags.Host != "" {
@@ -359,12 +295,12 @@ func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) Destina
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Update Destination", err).Print()
+		abctlx.Error("Update Destination Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Destination", err).Print()
+		abctlx.Error("Update Destination JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -381,7 +317,7 @@ func (s *airbyteService) DeleteDestination(destName string) bool {
 		&token,
 	)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Delete Destination", err)
+		abctlx.Error("Delete Destination Request Failed", err)
 	}
 
 	if res.Status >= http.StatusBadRequest {
@@ -411,7 +347,7 @@ func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) Destina
 			DestinationType: "clickhouse",
 		}
 	} else {
-		NewAirbyteError(REQUEST_FAIL, "Create Destination", fmt.Errorf("Failed to create config for %s", flags.Name)).Print()
+		abctlx.Error("Create Destination Request Failed", fmt.Errorf("Failed to create config for %s", flags.Name))
 	}
 
 	createDestReq := CreateDestinationRequest{
@@ -429,12 +365,12 @@ func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) Destina
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Create Destination", err).Print()
+		abctlx.Error("Create Destination Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Create Destination", err).Print()
+		abctlx.Error("Create Destination JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -473,12 +409,13 @@ func (s *airbyteService) ListDestinations(limit *int) ListDestinationResponse {
 		&token,
 	)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "List Destinations", err).Print()
+		abctlx.Error("List Destinations Request Failed", err)
+		// NewAirbyteError(REQUEST_FAIL, "List Destinations", err).Print()
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Destinations", err).Print()
+		abctlx.Error("JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -499,12 +436,12 @@ func (s *airbyteService) ListWorkspaces() *ListWorkspacesResponse {
 		&token,
 	)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "List Workspaces", err).Print()
+		abctlx.Error("List Workspaces Request Failed", err)
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Workspaces", err).Print()
+		abctlx.Error("List Workspaces JSON Unmarshal Failed", err)
 	}
 
 	return &response
@@ -554,12 +491,12 @@ func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceRe
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Create Source", err).Print()
+		abctlx.Error("Create Source Request Failed", err)
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Create Source", err).Print()
+		abctlx.Error("Create Source JSON Unmarshal Failed", err)
 	}
 
 	return &response
@@ -571,11 +508,11 @@ func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, sourceName st
 	source, err := s.GetSourceId(sourceName)
 
 	if err != nil {
-		NewAirbyteError("No such source found.", "Source Id", err).Print()
+		abctlx.Error("Source Not Found", err)
 	}
 
 	if source.SourceId == "" {
-		NewAirbyteError("No such source found.", "Source Id", nil).Print()
+		abctlx.Error("Source Not Found", err)
 	}
 
 	pretty.Print(params)
@@ -588,12 +525,12 @@ func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, sourceName st
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Update Source", err).Print()
+		abctlx.Error("Update Source Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Update Source", err).Print()
+		abctlx.Error("Update Source JSON Unmarshal Failed", err)
 	}
 
 	return &response
@@ -603,7 +540,7 @@ func (s *airbyteService) DeleteSource(sourceName string) bool {
 	token := s.GetAccessToken()
 	source, err := s.GetSourceId(sourceName)
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Source Id", err).Print()
+		abctlx.Error("Get Source Id Request Failed", err)
 	}
 
 	req, err := s.client.Request(
@@ -615,7 +552,7 @@ func (s *airbyteService) DeleteSource(sourceName string) bool {
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Delete Source", err).Print()
+		abctlx.Error("Delete Source Request Failed", err)
 	}
 
 	if req.Status >= 400 {
@@ -638,16 +575,16 @@ func (s *airbyteService) ListSources() *ListSourcesResponse {
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "List Sources", err).Print()
+		abctlx.Error("List Sources Request Failed", err)
 	}
 
 	if req == nil {
-		NewAirbyteError(REQUEST_FAIL, "List Sources", err).Print()
+		abctlx.Error("List Sources Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "List Sources", err)
+		abctlx.Error("List Sources Unmarshal Failed", err)
 	}
 
 	return &response
@@ -673,6 +610,10 @@ func (s *airbyteService) Health() *HealthCheckResponse {
 	}
 }
 
+func (s *airbyteService) GetClient() AirbyteClient {
+	return s.client
+}
+
 func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	var response GenerateAccessTokenResponse
 	cfg := s.client.GetConfig()
@@ -690,12 +631,13 @@ func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	)
 
 	if err != nil {
-		NewAirbyteError(REQUEST_FAIL, "Generate Access Token", err).Print()
+		abctlx.Error("Generate Access Token Request Failed", err)
+		// NewAirbyteError(REQUEST_FAIL, "Generate Access Token", err).Print()
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		NewAirbyteError(JSON_UNMARSHAL_FAIL, "Generate Access Token", err).Print()
+		abctlx.Error("Generate Access Token Unmarshal Failed", err)
 	}
 
 	return &response

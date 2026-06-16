@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/fatih/color"
 	"github.com/kr/pretty"
 )
 
@@ -20,6 +21,8 @@ type AirbyteClient interface {
 	GetConfig() config.AirbyteConfig
 	SetToken(string) string
 	GetToken() string
+	// Table(header table.Row, body []table.Row)
+	// ToRow(data []string) (table.Row, error)
 }
 
 type airbyteClient struct {
@@ -103,7 +106,7 @@ func (ac *airbyteClient) Request(
 	}
 	defer res.Body.Close()
 
-	pretty.Printf("\n [ %s ] [ %s ] - %s ", method, strconv.Itoa(res.StatusCode), url)
+	pretty.Printf("\n  %s  [ %s ] - %s ", color.HiGreenString("[ "+method+" ]"), strconv.Itoa(res.StatusCode), url)
 
 	if res.StatusCode >= http.StatusBadRequest {
 		errBody, _ := io.ReadAll(res.Body)

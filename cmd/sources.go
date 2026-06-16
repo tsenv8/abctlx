@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"abctlx/internal/abctlx"
 	"abctlx/internal/airbyte"
 	"context"
 	"fmt"
@@ -39,7 +40,7 @@ var updateSourceCmd = &cobra.Command{
 		CheckUpdateSourcesFlags(cmd, &updateParams)
 		tsn, err := cmd.Flags().GetString("target-source")
 		if err != nil {
-			airbyte.NewAirbyteError("Field Required", "Target Source Name", err).Print()
+			abctlx.Error("Target Source Name Field Required", err)
 		}
 
 		res := airbyte.NewAirbyteService(context.Background()).UpdateSource(&updateParams, tsn)
@@ -54,7 +55,7 @@ var deleteSourceCmd = &cobra.Command{
 
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
-			airbyte.NewAirbyteError("Field Required", "Delete Source Name", err).Print()
+			abctlx.Error("Delete Source Name Field Required", err)
 		}
 
 		success := airbyte.NewAirbyteService(context.Background()).DeleteSource(name)
@@ -102,7 +103,8 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("name"); f != nil && f.Changed {
 		name, err := cmd.Flags().GetString("name")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
+			// airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
 		}
 
 		updateParams.SourceName = name
@@ -111,7 +113,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("db"); f != nil && f.Changed {
 		dbName, err := cmd.Flags().GetString("db")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 
 		conf.DBName = dbName
@@ -119,7 +121,8 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("host"); f != nil && f.Changed {
 		hostName, err := cmd.Flags().GetString("host")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
+
 		}
 
 		conf.HostName = hostName
@@ -128,7 +131,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("pw"); f != nil && f.Changed {
 		password, err := cmd.Flags().GetString("pw")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 
 		conf.Password = password
@@ -136,8 +139,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("pub"); f != nil && f.Changed {
 		publicationName, err := cmd.Flags().GetString("pub")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
-
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 		conf.ReplicationMethod.Publication = publicationName
 
@@ -145,7 +147,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("rep"); f != nil && f.Changed {
 		repSlotName, err := cmd.Flags().GetString("rep")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 
 		conf.ReplicationMethod.ReplicationSlot = repSlotName
@@ -153,7 +155,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("user"); f != nil && f.Changed {
 		username, err := cmd.Flags().GetString("user")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 
 		conf.Username = username
@@ -169,7 +171,7 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 	if f := cmd.Flags().Lookup("port"); f != nil && f.Changed {
 		port, err := cmd.Flags().GetInt("port")
 		if err != nil {
-			airbyte.NewAirbyteError(errorMsg, errorField, err).Print()
+			abctlx.Error(errorMsg+" "+errorField, err)
 		}
 
 		conf.Port = port
