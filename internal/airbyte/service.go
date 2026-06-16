@@ -76,11 +76,11 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		NewAirbyteError("Invalid Connection ID", "Connection Resource", nil).Print()
 	}
 
-	if params.MinCpuCores > 1 || params.MaxCpuCores > 1 {
+	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
 		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
 	}
 
-	if params.MinMemGb > 1 || params.MaxMemGb > 1 {
+	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
 		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
 	}
 
