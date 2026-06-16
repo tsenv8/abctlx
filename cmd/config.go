@@ -22,8 +22,9 @@ var configCmd = &cobra.Command{
 		fmt.Printf("\n Port:" + strconv.Itoa(cfg.Port))
 		fmt.Printf("\n ClientId:" + cfg.ClientId)
 		fmt.Printf("\n ClientSecret:" + cfg.ClientKey)
+		fmt.Printf("\n Kubeconfig:" + cfg.Kubeconfig)
+		fmt.Printf("\n Namespace:" + cfg.Namespace)
 		fmt.Println("\n---------------------------")
-
 	},
 }
 

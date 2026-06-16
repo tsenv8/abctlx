@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"os"
 	"os/exec"
 	"strconv"
 
@@ -111,8 +110,8 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 	jsonResources := string(jsonBytes)
 
 	podName := "airbyte-db-0"
-	kubeConfig := os.Getenv("ABCTLX_AB_KUBECONFIG")
-	namespace := os.Getenv("ABCTLX_AB_NAMESPACE")
+	kubeConfig := s.client.GetConfig().Kubeconfig
+	namespace := s.client.GetConfig().Namespace
 	databaseName := "db-airbyte"
 
 	sqlQuery := fmt.Sprintf("UPDATE actor_definition SET resource_requirements = '%s' WHERE id = '%s';",
@@ -126,9 +125,9 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
-	fmt.Printf("\n [COMMAND] Executing update for actor %s... \n", params.ConnectionId)
-	fmt.Printf("\n [COMMAND] Query: %s", sqlQuery)
-	fmt.Printf("\n [COMMAND] Args: %s", args)
+	fmt.Printf("\n [ COMMAND ] Executing update for actor %s... \n", params.ConnectionId)
+	fmt.Printf("\n [ COMMAND ] Query: %s", sqlQuery)
+	fmt.Printf("\n [ COMMAND ] Args: %s", args)
 
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()

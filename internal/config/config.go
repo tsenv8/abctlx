@@ -7,11 +7,13 @@ import (
 )
 
 type AirbyteConfig struct {
-	URL       string `mapstructure:"ABCTLX_AB_URL"`
-	ClientId  string `mapstructure:"ABCTLX_AB_CID"`
-	ClientKey string `mapstructure:"ABCTLX_AB_CK"`
-	Port      int    `mapstructure:"ABCTLX_AB_PORT"`
-	API_URL   string `mapstructure:"ABCTLX_AB_API_URL"`
+	URL        string `mapstructure:"ABCTLX_AB_URL"`
+	ClientId   string `mapstructure:"ABCTLX_AB_CID"`
+	ClientKey  string `mapstructure:"ABCTLX_AB_CK"`
+	Port       int    `mapstructure:"ABCTLX_AB_PORT"`
+	API_URL    string `mapstructure:"ABCTLX_AB_API_URL"`
+	Kubeconfig string `mapstructure:"ABCTLX_AB_KUBECONFIG"`
+	Namespace  string `mapstructure:"ABCTLX_AB_NAMESPACE"`
 	// DEBUG     bool   `mapstructure:"ABCTLX_DEBUG"`
 }
 
