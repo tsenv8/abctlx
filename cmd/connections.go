@@ -23,11 +23,7 @@ func foo() {
 	res := s.ListConnections(nil)
 	for _, data := range res.Data {
 		rowString := []string{data.ConnectionId, data.Name, data.SourceId, data.DestinationId}
-		row, err := abctlx.ToRow(rowString)
-		if err != nil {
-			abctlx.Error("Failed ToRow Conversion", err)
-		}
-
+		row := abctlx.ToRow(rowString)
 		body = append(body, row)
 	}
 	header := table.Row{"ID", "Name", "Source ID", "Destination ID"}

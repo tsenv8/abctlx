@@ -1,11 +1,12 @@
 package cmd
 
 import (
+	"abctlx/internal/abctlx"
 	"abctlx/internal/airbyte"
 	"abctlx/internal/config"
-	"fmt"
 	"strconv"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
 )
 
@@ -15,16 +16,18 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := airbyte.NewAirbyteClient(config.Data).GetConfig()
 		apiEndpoint := airbyte.NewAirbyteClient(cfg).GetURL(nil)
-		fmt.Println("-- Current Configuration --")
-		fmt.Printf("\n URL:" + cfg.URL)
-		fmt.Printf("\n API_URL:" + cfg.API_URL)
-		fmt.Printf("\n API Endpoint:" + apiEndpoint)
-		fmt.Printf("\n Port:" + strconv.Itoa(cfg.Port))
-		fmt.Printf("\n ClientId:" + cfg.ClientId)
-		fmt.Printf("\n ClientSecret:" + cfg.ClientKey)
-		fmt.Printf("\n Kubeconfig:" + cfg.Kubeconfig)
-		fmt.Printf("\n Namespace:" + cfg.Namespace)
-		fmt.Println("\n---------------------------")
+		headers := abctlx.ToRow([]string{"Variable", "Value"})
+		body := []table.Row{
+			abctlx.ToRow([]string{"URL", cfg.URL}),
+			abctlx.ToRow([]string{"API URL", cfg.API_URL}),
+			abctlx.ToRow([]string{"API Endpoint", apiEndpoint}),
+			abctlx.ToRow([]string{"Port", strconv.Itoa(cfg.Port)}),
+			abctlx.ToRow([]string{"Client ID", cfg.ClientId}),
+			abctlx.ToRow([]string{"Client Secret", cfg.ClientKey}),
+			abctlx.ToRow([]string{"Kubeconfig", cfg.Kubeconfig}),
+			abctlx.ToRow([]string{"Namespace", cfg.Namespace}),
+		}
+		abctlx.Table(headers, body)
 	},
 }
 

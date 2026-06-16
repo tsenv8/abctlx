@@ -10,8 +10,12 @@ import (
 )
 
 func Error(message string, e error) {
+	var debugLabel string
 	errorLabel := color.HiRedString("[ ERROR ]")
-	debugLabel := color.HiRedString("[ DEBUG ]")
+	if e != nil {
+		debugLabel = color.HiRedString("[ DEBUG ]")
+	}
+
 	fmt.Printf("\n [ %s ] from %s", errorLabel, message)
 	fmt.Printf("\n [ %s ] %v", debugLabel, e)
 	os.Exit(1)
@@ -37,16 +41,16 @@ func Table(header table.Row, body []table.Row) {
 	t.Render()
 }
 
-func ToRow(data []string) (table.Row, error) {
+func ToRow(data []string) table.Row {
 	var output table.Row
 
 	if len(data) == 0 {
-		return nil, fmt.Errorf("Empty data")
+		Error("Empty ToRow data", nil)
 	}
 
 	for _, data := range data {
 		output = append(output, data)
 	}
 
-	return output, nil
+	return output
 }
