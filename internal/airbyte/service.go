@@ -113,16 +113,17 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 	podName := "airbyte-db-0"
 	kubeConfig := os.Getenv("ABCTLX_AB_KUBECONFIG")
 	namespace := os.Getenv("ABCTLX_AB_NAMESPACE")
+	databaseName := "db-airbyte"
 
 	sqlQuery := fmt.Sprintf("UPDATE actor_definition SET resource_requirements = '%s' WHERE id = '%s';",
 		jsonResources, params.ConnectionId)
 
 	args := []string{
-		"exec", podName,
 		"--kubeconfig=" + kubeConfig,
 		"--namespace=" + namespace,
+		"exec", podName,
 		"--",
-		"psql", "-U", "airbyte", "-d", "airbyte_db", "-c", sqlQuery,
+		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
 	fmt.Printf("\n Executing update for actor %s...\n", params.ConnectionId)
