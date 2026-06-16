@@ -72,50 +72,41 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 
 	if !actorValid {
 		NewAirbyteError("Invalid Actor ID", "Connection Resource", nil).Print()
-		return
 	}
 
 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
 		NewAirbyteError("Invalid Cpu Core Values", "Connection Resource", nil).Print()
-		return
 	}
 
 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
 		NewAirbyteError("Invalid Memory Values", "Connection Resource", nil).Print()
-		return
 	}
 
 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
 	minMemoryMbStr := strconv.Itoa(params.MinMemGb*1024) + "Mi"
 
-	config := ActorResourceConfig{
-		JobSpecific: []JobRequirement{
-			{
-				JobType: "sync",
-				ResourceRequirements: ResourceRequirements{
-					CPULimit:      strconv.Itoa(params.MaxCpuCores),
-					CPURequest:    strconv.Itoa(params.MinCpuCores),
-					MemoryLimit:   maxMemoryMbStr,
-					MemoryRequest: minMemoryMbStr,
-				},
-			},
-		},
+	resourceRequirements := ResourceRequirements{
+		CPULimit:      strconv.Itoa(params.MaxCpuCores),
+		CPURequest:    strconv.Itoa(params.MinCpuCores),
+		MemoryLimit:   maxMemoryMbStr,
+		MemoryRequest: minMemoryMbStr,
 	}
 
-	jsonBytes, err := json.Marshal(config)
+	jsonBytes, err := json.Marshal(resourceRequirements)
 	if err != nil {
 		NewAirbyteError("JSON Encoding Error", "Connection Resource", err).Print()
 		return
 	}
-	jsonResources := string(jsonBytes)
 
+	jsonResources := string(jsonBytes)
 	podName := "airbyte-db-0"
 	kubeConfig := s.client.GetConfig().Kubeconfig
 	namespace := s.client.GetConfig().Namespace
 	databaseName := "db-airbyte"
+	table := "connection"
 
-	sqlQuery := fmt.Sprintf("UPDATE actor_definition SET resource_requirements = '%s' WHERE id = '%s';",
-		jsonResources, params.ConnectionId)
+	sqlQuery := fmt.Sprintf("UPDATE %s SET resource_requirements = '%s' WHERE id = '%s';",
+		table, jsonResources, params.ConnectionId)
 
 	args := []string{
 		"--kubeconfig=" + kubeConfig,
@@ -125,7 +116,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
-	fmt.Printf("\n [ COMMAND ] Executing update for actor %s... \n", params.ConnectionId)
+	fmt.Printf("\n [ COMMAND ] Executing update for connection %s... \n", params.ConnectionId)
 	fmt.Printf("\n [ COMMAND ] Query: %s", sqlQuery)
 	fmt.Printf("\n [ COMMAND ] Args: %s", args)
 

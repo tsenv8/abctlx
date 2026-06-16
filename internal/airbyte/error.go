@@ -20,8 +20,8 @@ func NewAirbyteError(msg string, field string, err error) *airbyteError {
 }
 
 func (e *airbyteError) Print() {
-	fmt.Printf("\n ERROR: %s", e.Msg)
-	fmt.Printf("\n FIELD: %s", e.Field)
-	fmt.Printf("\n DEBUG: %v", e)
+	fmt.Printf("\n [ ERROR ] %s from %s", e.Msg, e.Field)
+	// fmt.Printf("\n [ FIELD ] %s", e.Field)
+	fmt.Printf("\n [ DEBUG ] %v", e)
 	os.Exit(1)
 }
