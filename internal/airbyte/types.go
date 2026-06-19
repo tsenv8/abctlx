@@ -8,6 +8,32 @@ type AbctlxResponse struct {
 	Status   int
 }
 
+const (
+	SYNC_MODE_INCREMENTAL_APPEND          = "incremental_append"
+	SYNC_MODE_INCREMENTAL_DEDUPED_HISTORY = "incremental_deduped_history"
+	SYNC_MODE_FULL_REFRESH_OVERWRITE      = "full_refresh_overwrite"
+	SYNC_MODE_FULL_REFRESH_APPEND         = "full_refresh_append"
+
+	SCHEDULE_TYPE_MANUAL = "manual"
+	SCHEDULE_TYPE_CRON   = "cron"
+
+	DATA_RESIDENCY_AUTO = "auto"
+	DATA_RESIDENCY_US   = "us"
+	DATA_RESIDENCY_EU   = "eu"
+
+	NAMESPACE_DEFINITION_SOURCE      = "source"
+	NAMESPACE_DEFINITION_DESTINATION = "destination"
+
+	NONBREAKING_SCHEMA_BEHAVIOR_IGNORE             = "ignore"
+	NONBREAKING_SCHEMA_BEHAVIOR_DISABLE_CONNECTION = "disable_connection"
+	NONBREAKING_SCHEMA_BEHAVIOR_PROPAGATE_FULL     = "propagate_fully"
+	NONBREAKING_SCHEMA_BEHAVIOR_PROPAGATE_COLS     = "propagate_columns"
+
+	CON_STATUS_ACTIVE     = "active"
+	CON_STATUS_INACTIVE   = "inactive"
+	CON_STATUS_DEPRECATED = "deprecated"
+)
+
 // connections
 type ConnectionData struct {
 	ConnectionId                     string                      `json:"connectionId"`
@@ -37,17 +63,28 @@ type UpdateConnectionRequest struct {
 	Status                           string                      `json:"status,omitempty"`
 }
 
-type CreateConnectionRequest struct {
+type CreateConnectionRequestBody struct {
 	Name                             string                      `json:"name"`
 	SourceId                         string                      `json:"sourceId"`
 	Configurations                   StreamConfigurations        `json:"configurations"`
 	DestinationId                    string                      `json:"destinationId"`
 	Schedule                         ConnectionScheduleParameter `json:"schedule"`
-	Residency                        string                      `json:"residency"`
-	NamespaceDefinition              string                      `json:"namespaceDefinition"`
+	Residency                        string                      `json:"residency,omitempty"`
+	NamespaceDefinition              string                      `json:"namespaceDefinition,omitempty"`
 	Prefix                           string                      `json:"prefix,omitempty"`
 	NonBreakingSchemaUpdatesBehavior string                      `json:"nonBreakingSchemaUpdatesBehavior,omitempty"`
 	Status                           string                      `json:"status"`
+}
+
+type CreateConnectionRequestFlags struct {
+	Name     string
+	SourceId string
+	DestId   string
+}
+
+type CreateConnectionRequest struct {
+	Flags CreateConnectionRequestFlags
+	Body  CreateConnectionRequestBody
 }
 
 type ListConnectionResponse struct {

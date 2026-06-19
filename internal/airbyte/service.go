@@ -219,14 +219,17 @@ func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connec
 	return response
 }
 
-func (s *airbyteService) CreateConnection(params CreateConnectionRequest) ConnectionData {
+func (s *airbyteService) CreateConnection(params *CreateConnectionRequest) ConnectionData {
 	var response ConnectionData
 	token := s.GetAccessToken()
+
+	s.buildCreateConnectionRequest(params)
+
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodPost,
 		CONNECTION_ENDPOINT,
-		params,
+		&params.Body,
 		&token,
 	)
 
@@ -240,6 +243,26 @@ func (s *airbyteService) CreateConnection(params CreateConnectionRequest) Connec
 	}
 
 	return response
+}
+
+func (s *airbyteService) buildCreateConnectionRequest(params *CreateConnectionRequest) *CreateConnectionRequest {
+	//stream configuration
+	// params.Configurations = StreamConfigurations{
+	// 	// streams: [
+
+	// 	// ]
+	// }
+	params.Body.SourceId = params.Flags.SourceId
+	params.Body.DestinationId = params.Flags.DestId
+	params.Body.Schedule = ConnectionScheduleParameter{
+		Type: SCHEDULE_TYPE_MANUAL,
+	}
+
+	params.Body.Residency = DATA_RESIDENCY_AUTO
+	params.Body.NamespaceDefinition = NAMESPACE_DEFINITION_SOURCE
+	params.Body.NonBreakingSchemaUpdatesBehavior = NONBREAKING_SCHEMA_BEHAVIOR_IGNORE
+	params.Body.Status = CON_STATUS_ACTIVE
+	return params
 }
 
 // Destinations

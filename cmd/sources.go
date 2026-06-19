@@ -6,6 +6,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
@@ -17,7 +18,24 @@ var sourcesCmd = &cobra.Command{
 	Short: "Interacts with sources",
 	Run: func(cmd *cobra.Command, args []string) {
 		res := airbyte.NewAirbyteService(context.Background()).ListSources()
-		fmt.Println(res.Data)
+
+		var body []table.Row
+		for _, source := range res.Data {
+			row := table.Row{
+				source.SourceId,
+				source.Name,
+				source.SourceType,
+				source.WorkspaceId,
+			}
+
+			body = append(body, row)
+		}
+
+		if len(body) < 1 {
+			abctlx.Log("info", "No sources found.")
+		}
+
+		abctlx.Table(table.Row{"ID", "Name", "Type", "Workspace ID"}, body, "Sources")
 	},
 }
 
@@ -181,7 +199,6 @@ func CheckUpdateSourcesFlags(cmd *cobra.Command, updateParams *airbyte.UpdateSou
 }
 
 func updateSourcesFlags() {
-
 	cmd := updateSourceCmd
 	cmd.Flags().String("target-source", "", "Target Source Name")
 	cmd.Flags().String("name", "", "Source Name")

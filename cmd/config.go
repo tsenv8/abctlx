@@ -27,7 +27,7 @@ var configCmd = &cobra.Command{
 			abctlx.ToRow([]string{"Kubeconfig", cfg.Kubeconfig}),
 			abctlx.ToRow([]string{"Namespace", cfg.Namespace}),
 		}
-		abctlx.Table(headers, body)
+		abctlx.Table(headers, body, "Configuration")
 	},
 }
 

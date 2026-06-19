@@ -1,9 +1,11 @@
 package cmd
 
 import (
+	"abctlx/internal/abctlx"
 	"abctlx/internal/airbyte"
 	"context"
 
+	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
@@ -12,39 +14,34 @@ var destCmd = &cobra.Command{
 	Use:   "dest",
 	Short: "Lists Destinations",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).ListDestinations(nil)
-		pretty.Print(res)
+		runDest()
 	},
 }
+
 var createDestFlags airbyte.CreateDestinationFlags
 var createDestCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates Destinations",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).CreateDestination(createDestFlags)
-		pretty.Print(res)
+		runCreateDest()
 	},
 }
+
 var updateDestFlags airbyte.UpdateDestinationFlags
 var updateDestCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates an existing Destination using its Destination Id",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(updateDestFlags)
-		pretty.Print(res)
+		runUpdateDest()
 	},
 }
+
 var deleteDestName string
 var deleteDestCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes an existing Destination using its Destination Id",
 	Run: func(cmd *cobra.Command, args []string) {
-		res := airbyte.NewAirbyteService(context.Background()).DeleteDestination(deleteDestName)
-		if res {
-			pretty.Print("Deleted Successfully.")
-		} else {
-			pretty.Print("Failed Deletion of " + deleteDestName)
-		}
+		runDeleteDest()
 	},
 }
 
@@ -58,6 +55,38 @@ func init() {
 	destCmd.AddCommand(createDestCmd)
 	destCmd.AddCommand(deleteDestCmd)
 	destCmd.AddCommand(updateDestCmd)
+}
+
+func runDest() {
+	res := airbyte.NewAirbyteService(context.Background()).ListDestinations(nil)
+	var body []table.Row
+	for _, data := range res.Data {
+		row := table.Row{
+			data.DestinationId,
+			data.Name,
+			data.DestinationType,
+			data.WorkspaceId,
+		}
+
+		body = append(body, row)
+	}
+
+	abctlx.Table(table.Row{"ID", "Name", "Type", "Workspace ID"}, body, "Destinations")
+}
+
+func runCreateDest() {
+	res := airbyte.NewAirbyteService(context.Background()).CreateDestination(createDestFlags)
+	pretty.Print(res)
+}
+
+func runUpdateDest() {
+	res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(updateDestFlags)
+	pretty.Print(res)
+}
+
+func runDeleteDest() {
+	res := airbyte.NewAirbyteService(context.Background()).DeleteDestination(deleteDestName)
+	abctlx.BoolLog(res)
 }
 
 func createDestCmdFlags() {
