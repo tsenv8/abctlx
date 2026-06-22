@@ -1,7 +1,7 @@
 package airbyte
 
 import (
-	"abctlx/internal/abctlx"
+	"abctlx/helpers"
 	"abctlx/internal/config"
 	"context"
 	"encoding/json"
@@ -21,18 +21,18 @@ type AirbyteService interface {
 	GetClient() AirbyteClient
 
 	//Sources
-	CreateSource(params CreateSourceParams) *CreateSourceResponse
-	UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse
-	DeleteSource(sourceName string) bool
-	ListSources() *ListSourcesResponse
-	GetSourceId(name string) (*SourceData, error)
+	// CreateSource(params CreateSourceParams) *CreateSourceResponse
+	// UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse
+	// DeleteSource(sourceName string) bool
+	// ListSources() *ListSourcesResponse
+	// GetSourceId(name string) (*SourceData, error)
 
 	//Destinations
-	CreateDestination(params CreateDestinationRequest) DestinationData
-	UpdateDestination(params UpdateDestinationRequest) DestinationData
-	DeleteDestination(destName string) bool
-	ListDestinations(limit int) ListDestinationResponse
-	GetDestination(destName string) DestinationData
+	// CreateDestination(params CreateDestinationRequest) DestinationData
+	// UpdateDestination(params UpdateDestinationRequest) DestinationData
+	// DeleteDestination(destName string) bool
+	// ListDestinations(limit int) ListDestinationResponse
+	// GetDestination(destName string) DestinationData
 
 	//Connections
 	CreateConnection(params CreateConnectionRequest) ConnectionData
@@ -74,15 +74,15 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 	}
 
 	if !conValid {
-		abctlx.Error("Invalid Connector ID", nil)
+		helpers.Error("Invalid Connector ID", nil)
 	}
 
 	if params.MinCpuCores < 1 || params.MaxCpuCores < 1 {
-		abctlx.Error("Invalid Cpu Core Values", nil)
+		helpers.Error("Invalid Cpu Core Values", nil)
 	}
 
 	if params.MinMemGb < 1 || params.MaxMemGb < 1 {
-		abctlx.Error("Invalid Memory Values", nil)
+		helpers.Error("Invalid Memory Values", nil)
 	}
 
 	maxMemoryMbStr := strconv.Itoa(params.MaxMemGb*1024) + "Mi"
@@ -97,7 +97,7 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 
 	jsonBytes, err := json.Marshal(resourceRequirements)
 	if err != nil {
-		abctlx.Error("JSON Encoding Error", err)
+		helpers.Error("JSON Encoding Error", err)
 	}
 
 	jsonResources := string(jsonBytes)
@@ -118,14 +118,14 @@ func (s *airbyteService) UpdateConnectionResourceRequirement(params *UpdateConne
 		"psql", "-U", "airbyte", "-d", databaseName, "-c", sqlQuery,
 	}
 
-	abctlx.Log("COMMAND", fmt.Sprintf("Executing update for connection %s... \n", params.ConnectionId))
-	abctlx.Log("COMMAND", fmt.Sprintf("Query: %s ", sqlQuery))
-	abctlx.Log("COMMAND", fmt.Sprintf("Args: %s", args))
+	helpers.Log("COMMAND", fmt.Sprintf("Executing update for connection %s... \n", params.ConnectionId))
+	helpers.Log("COMMAND", fmt.Sprintf("Query: %s ", sqlQuery))
+	helpers.Log("COMMAND", fmt.Sprintf("Args: %s", args))
 
 	cmd := exec.Command("kubectl", args...)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		abctlx.Error(string(output), err)
+		helpers.Error(string(output), err)
 	}
 
 	fmt.Printf("Success:\n%s\n", string(output))
@@ -165,12 +165,12 @@ func (s *airbyteService) ListConnections(limit *int) ListConnectionResponse {
 		&token,
 	)
 	if err != nil {
-		abctlx.Error("List Connections Request Failed", err)
+		helpers.Error("List Connections Request Failed", err)
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		abctlx.Error("List Connections JSON Unmarshal Failed", err)
+		helpers.Error("List Connections JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -186,7 +186,7 @@ func (s *airbyteService) DeleteConnection(connectionName string) bool {
 		&token,
 	)
 	if err != nil {
-		abctlx.Error("Delete Connection Request Failed", err)
+		helpers.Error("Delete Connection Request Failed", err)
 	}
 
 	if req.Status >= http.StatusBadRequest {
@@ -208,22 +208,22 @@ func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connec
 	)
 
 	if err != nil {
-		abctlx.Error("Update Connection Request Failed", err)
+		helpers.Error("Update Connection Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		abctlx.Error("Update Connection JSON Unmarshal Failed", err)
+		helpers.Error("Update Connection JSON Unmarshal Failed", err)
 	}
 
 	return response
 }
 
-func (s *airbyteService) CreateConnection(params *CreateConnectionRequest) ConnectionData {
+func (s *airbyteService) CreateConnection(params CreateConnectionRequest) ConnectionData {
 	var response ConnectionData
 	token := s.GetAccessToken()
 
-	s.buildCreateConnectionRequest(params)
+	s.buildCreateConnectionRequest(&params)
 
 	req, err := s.client.Request(
 		s.ctx,
@@ -234,12 +234,12 @@ func (s *airbyteService) CreateConnection(params *CreateConnectionRequest) Conne
 	)
 
 	if err != nil {
-		abctlx.Error("Create Connection Request Failed", err)
+		helpers.Error("Create Connection Request Failed", err)
 	}
 
 	err = json.Unmarshal(req.Body, &response)
 	if err != nil {
-		abctlx.Error("Create Connection JSON Unmarshal Failed", err)
+		helpers.Error("Create Connection JSON Unmarshal Failed", err)
 	}
 
 	return response
@@ -266,183 +266,184 @@ func (s *airbyteService) buildCreateConnectionRequest(params *CreateConnectionRe
 }
 
 // Destinations
-func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) DestinationData {
-	var response DestinationData
-	token := s.GetAccessToken()
-	dest := s.GetDestination(flags.DestName)
 
-	if dest.DestinationId == "" {
-		abctlx.Error("Update Destination Request Failed", nil)
-		// NewAirbyteError(REQUEST_FAIL, "Update Destination", fmt.Errorf("No Destination Object Found")).Print()
-	}
+// func (s *airbyteService) UpdateDestination(flags UpdateDestinationFlags) DestinationData {
+// 	var response DestinationData
+// 	token := s.GetAccessToken()
+// 	dest := s.GetDestination(flags.DestName)
 
-	// if flags.Host != "" {
-	// 	config.Host = flags.Host
-	// }
+// 	if dest.DestinationId == "" {
+// 		helpers.Error("Update Destination Request Failed", nil)
+// 		// NewAirbyteError(REQUEST_FAIL, "Update Destination", fmt.Errorf("No Destination Object Found")).Print()
+// 	}
 
-	// if flags.Port != "" {
-	// 	config.Port = flags.Port
-	// }
+// 	// if flags.Host != "" {
+// 	// 	config.Host = flags.Host
+// 	// }
 
-	// if flags.Database != "" {
-	// 	config.Database = flags.Database
-	// }
+// 	// if flags.Port != "" {
+// 	// 	config.Port = flags.Port
+// 	// }
 
-	// if flags.Username != "" {
-	// 	config.Username = flags.Username
-	// }
+// 	// if flags.Database != "" {
+// 	// 	config.Database = flags.Database
+// 	// }
 
-	// if flags.Username != "" {
-	// 	config.Password = flags.Password
-	// }
+// 	// if flags.Username != "" {
+// 	// 	config.Username = flags.Username
+// 	// }
 
-	config := DestinationConfigurationParameter{
-		Host:     "",
-		Port:     "",
-		Database: "",
-		Username: "",
-		Password: "",
-	}
+// 	// if flags.Username != "" {
+// 	// 	config.Password = flags.Password
+// 	// }
 
-	updateDestReq := UpdateDestinationRequest{
-		Name:          flags.Name,
-		Configuration: &config,
-	}
+// 	config := DestinationConfigurationParameter{
+// 		Host:     "",
+// 		Port:     "",
+// 		Database: "",
+// 		Username: "",
+// 		Password: "",
+// 	}
 
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodPatch,
-		DESTINATION_ENDPOINT+dest.DestinationId,
-		updateDestReq,
-		&token,
-	)
+// 	updateDestReq := UpdateDestinationRequest{
+// 		Name:          flags.Name,
+// 		Configuration: &config,
+// 	}
 
-	if err != nil {
-		abctlx.Error("Update Destination Request Failed", err)
-	}
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodPatch,
+// 		DESTINATION_ENDPOINT+dest.DestinationId,
+// 		updateDestReq,
+// 		&token,
+// 	)
 
-	err = json.Unmarshal(req.Body, &response)
-	if err != nil {
-		abctlx.Error("Update Destination JSON Unmarshal Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Update Destination Request Failed", err)
+// 	}
 
-	return response
-}
+// 	err = json.Unmarshal(req.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("Update Destination JSON Unmarshal Failed", err)
+// 	}
 
-func (s *airbyteService) DeleteDestination(destName string) bool {
-	destination := s.GetDestination(destName)
-	token := s.GetAccessToken()
-	res, err := s.client.Request(
-		s.ctx,
-		http.MethodDelete,
-		DESTINATION_ENDPOINT+"/"+destination.DestinationId,
-		nil,
-		&token,
-	)
-	if err != nil {
-		abctlx.Error("Delete Destination Request Failed", err)
-	}
+// 	return response
+// }
 
-	if res.Status >= http.StatusBadRequest {
-		return false
-	}
+// func (s *airbyteService) DeleteDestination(destName string) bool {
+// 	destination := s.GetDestination(destName)
+// 	token := s.GetAccessToken()
+// 	res, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodDelete,
+// 		DESTINATION_ENDPOINT+"/"+destination.DestinationId,
+// 		nil,
+// 		&token,
+// 	)
+// 	if err != nil {
+// 		helpers.Error("Delete Destination Request Failed", err)
+// 	}
 
-	return true
-}
+// 	if res.Status >= http.StatusBadRequest {
+// 		return false
+// 	}
 
-func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) DestinationData {
-	var response DestinationData
-	var config DestinationConfigurationParameter
-	token := s.GetAccessToken()
-	workspaceId := s.GetWorkspaceId()
+// 	return true
+// }
 
-	if flags.ConfigType == "clickhouse" {
-		config = DestinationConfigurationParameter{
-			Host:     "localhost",
-			Port:     "8123",
-			Database: "chdb",
-			Username: "default",
-			Protocol: "http",
-			Password: "1",
-			TunnelMethod: TunnelMethodParameter{
-				TunnelMethod: "NO_TUNNEL",
-			},
-			DestinationType: "clickhouse",
-		}
-	} else {
-		abctlx.Error("Create Destination Request Failed", fmt.Errorf("Failed to create config for %s", flags.Name))
-	}
+// func (s *airbyteService) CreateDestination(flags CreateDestinationFlags) DestinationData {
+// 	var response DestinationData
+// 	var config DestinationConfigurationParameter
+// 	token := s.GetAccessToken()
+// 	workspaceId := s.GetWorkspaceId()
 
-	createDestReq := CreateDestinationRequest{
-		Name:          flags.Name,
-		WorkspaceId:   *workspaceId,
-		Configuration: config,
-	}
+// 	if flags.ConfigType == "clickhouse" {
+// 		config = DestinationConfigurationParameter{
+// 			Host:     "localhost",
+// 			Port:     "8123",
+// 			Database: "chdb",
+// 			Username: "default",
+// 			Protocol: "http",
+// 			Password: "1",
+// 			TunnelMethod: TunnelMethodParameter{
+// 				TunnelMethod: "NO_TUNNEL",
+// 			},
+// 			DestinationType: "clickhouse",
+// 		}
+// 	} else {
+// 		helpers.Error("Create Destination Request Failed", fmt.Errorf("Failed to create config for %s", flags.Name))
+// 	}
 
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodPost,
-		DESTINATION_ENDPOINT,
-		createDestReq,
-		&token,
-	)
+// 	createDestReq := CreateDestinationRequest{
+// 		Name:          flags.Name,
+// 		WorkspaceId:   *workspaceId,
+// 		Configuration: config,
+// 	}
 
-	if err != nil {
-		abctlx.Error("Create Destination Request Failed", err)
-	}
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodPost,
+// 		DESTINATION_ENDPOINT,
+// 		createDestReq,
+// 		&token,
+// 	)
 
-	err = json.Unmarshal(req.Body, &response)
-	if err != nil {
-		abctlx.Error("Create Destination JSON Unmarshal Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Create Destination Request Failed", err)
+// 	}
 
-	return response
-}
+// 	err = json.Unmarshal(req.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("Create Destination JSON Unmarshal Failed", err)
+// 	}
 
-func (s *airbyteService) GetDestination(destName string) DestinationData {
-	destinations := s.ListDestinations(nil)
-	var targetDestination DestinationData
-	for _, destination := range destinations.Data {
-		if destination.Name == destName {
-			targetDestination = destination
-			break
-		}
-	}
+// 	return response
+// }
 
-	pretty.Print(targetDestination)
-	return targetDestination
-}
+// func (s *airbyteService) GetDestination(destName string) DestinationData {
+// 	destinations := s.ListDestinations(nil)
+// 	var targetDestination DestinationData
+// 	for _, destination := range destinations.Data {
+// 		if destination.Name == destName {
+// 			targetDestination = destination
+// 			break
+// 		}
+// 	}
 
-func (s *airbyteService) ListDestinations(limit *int) ListDestinationResponse {
-	var response ListDestinationResponse
-	var finalEndpoint string
-	token := s.GetAccessToken()
+// 	pretty.Print(targetDestination)
+// 	return targetDestination
+// }
 
-	if limit != nil {
-		finalEndpoint = DESTINATION_ENDPOINT + "?limit=" + strconv.Itoa(*limit)
-	} else {
-		finalEndpoint = DESTINATION_ENDPOINT
-	}
+// func (s *airbyteService) ListDestinations(limit *int) ListDestinationResponse {
+// 	var response ListDestinationResponse
+// 	var finalEndpoint string
+// 	token := s.GetAccessToken()
 
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodGet,
-		finalEndpoint,
-		nil,
-		&token,
-	)
-	if err != nil {
-		abctlx.Error("List Destinations Request Failed", err)
-		// NewAirbyteError(REQUEST_FAIL, "List Destinations", err).Print()
-	}
+// 	if limit != nil {
+// 		finalEndpoint = DESTINATION_ENDPOINT + "?limit=" + strconv.Itoa(*limit)
+// 	} else {
+// 		finalEndpoint = DESTINATION_ENDPOINT
+// 	}
 
-	err = json.Unmarshal(req.Body, &response)
-	if err != nil {
-		abctlx.Error("JSON Unmarshal Failed", err)
-	}
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodGet,
+// 		finalEndpoint,
+// 		nil,
+// 		&token,
+// 	)
+// 	if err != nil {
+// 		helpers.Error("List Destinations Request Failed", err)
+// 		// NewAirbyteError(REQUEST_FAIL, "List Destinations", err).Print()
+// 	}
 
-	return response
-}
+// 	err = json.Unmarshal(req.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("JSON Unmarshal Failed", err)
+// 	}
+
+// 	return response
+// }
 
 func (s *airbyteService) GetWorkspaceId() *string {
 	return &s.ListWorkspaces().Data[0].WorkspaceId
@@ -459,159 +460,159 @@ func (s *airbyteService) ListWorkspaces() *ListWorkspacesResponse {
 		&token,
 	)
 	if err != nil {
-		abctlx.Error("List Workspaces Request Failed", err)
+		helpers.Error("List Workspaces Request Failed", err)
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		abctlx.Error("List Workspaces JSON Unmarshal Failed", err)
+		helpers.Error("List Workspaces JSON Unmarshal Failed", err)
 	}
 
 	return &response
 }
 
-func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceResponse {
-	var response CreateSourceResponse
-	workspaceId := s.GetWorkspaceId()
-	token := s.GetAccessToken()
+// func (s *airbyteService) CreateSource(params CreateSourceParams) *CreateSourceResponse {
+// 	var response CreateSourceResponse
+// 	workspaceId := s.GetWorkspaceId()
+// 	token := s.GetAccessToken()
 
-	cdcReplicationMethod := CDCReplicationMethodParameter{
-		Method:          "CDC",
-		Plugin:          "pgoutput",
-		ReplicationSlot: params.ReplicationSlot,
-		Publication:     params.PublicationName,
-	}
+// 	cdcReplicationMethod := CDCReplicationMethodParameter{
+// 		Method:          "CDC",
+// 		Plugin:          "pgoutput",
+// 		ReplicationSlot: params.ReplicationSlot,
+// 		Publication:     params.PublicationName,
+// 	}
 
-	sourcePostgresConf := PostgresConfigurationParameter{
-		SourceType: "postgres",
-		Host:       params.HostName,
-		Port:       params.Port,
-		Database:   params.DBName,
-		Schemas:    params.Schemas,
-		Username:   params.Username,
-		Password:   params.Password,
-		SSlMode: &SSLModeParameter{
-			Mode: "disable",
-		},
-		ReplicationMethod: cdcReplicationMethod,
-		TunnelMethod: TunnelMethodParameter{
-			TunnelMethod: "NO_TUNNEL",
-		},
-	}
+// 	sourcePostgresConf := PostgresConfigurationParameter{
+// 		SourceType: "postgres",
+// 		Host:       params.HostName,
+// 		Port:       params.Port,
+// 		Database:   params.DBName,
+// 		Schemas:    params.Schemas,
+// 		Username:   params.Username,
+// 		Password:   params.Password,
+// 		SSlMode: &SSLModeParameter{
+// 			Mode: "disable",
+// 		},
+// 		ReplicationMethod: cdcReplicationMethod,
+// 		TunnelMethod: TunnelMethodParameter{
+// 			TunnelMethod: "NO_TUNNEL",
+// 		},
+// 	}
 
-	requestBody := CreateSourceRequest{
-		Name:          params.Name,
-		WorkspaceId:   *workspaceId,
-		Configuration: sourcePostgresConf,
-	}
+// 	requestBody := CreateSourceRequest{
+// 		Name:          params.Name,
+// 		WorkspaceId:   *workspaceId,
+// 		Configuration: sourcePostgresConf,
+// 	}
 
-	res, err := s.client.Request(
-		s.ctx,
-		http.MethodPost,
-		SOURCES_ENDPOINT,
-		requestBody,
-		&token,
-	)
+// 	res, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodPost,
+// 		SOURCES_ENDPOINT,
+// 		requestBody,
+// 		&token,
+// 	)
 
-	if err != nil {
-		abctlx.Error("Create Source Request Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Create Source Request Failed", err)
+// 	}
 
-	err = json.Unmarshal(res.Body, &response)
-	if err != nil {
-		abctlx.Error("Create Source JSON Unmarshal Failed", err)
-	}
+// 	err = json.Unmarshal(res.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("Create Source JSON Unmarshal Failed", err)
+// 	}
 
-	return &response
-}
+// 	return &response
+// }
 
-func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse {
-	response := UpdateSourceResponse{}
-	token := s.GetAccessToken()
-	source, err := s.GetSourceId(sourceName)
+// func (s *airbyteService) UpdateSource(params *UpdateSourceRequest, sourceName string) *UpdateSourceResponse {
+// 	response := UpdateSourceResponse{}
+// 	token := s.GetAccessToken()
+// 	source, err := s.GetSourceId(sourceName)
 
-	if err != nil {
-		abctlx.Error("Source Not Found", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Source Not Found", err)
+// 	}
 
-	if source.SourceId == "" {
-		abctlx.Error("Source Not Found", err)
-	}
+// 	if source.SourceId == "" {
+// 		helpers.Error("Source Not Found", err)
+// 	}
 
-	pretty.Print(params)
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodPatch,
-		SOURCES_ENDPOINT+"/"+*&source.SourceId,
-		params,
-		&token,
-	)
+// 	pretty.Print(params)
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodPatch,
+// 		SOURCES_ENDPOINT+"/"+*&source.SourceId,
+// 		params,
+// 		&token,
+// 	)
 
-	if err != nil {
-		abctlx.Error("Update Source Request Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Update Source Request Failed", err)
+// 	}
 
-	err = json.Unmarshal(req.Body, &response)
-	if err != nil {
-		abctlx.Error("Update Source JSON Unmarshal Failed", err)
-	}
+// 	err = json.Unmarshal(req.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("Update Source JSON Unmarshal Failed", err)
+// 	}
 
-	return &response
-}
+// 	return &response
+// }
 
-func (s *airbyteService) DeleteSource(sourceName string) bool {
-	token := s.GetAccessToken()
-	source, err := s.GetSourceId(sourceName)
-	if err != nil {
-		abctlx.Error("Get Source Id Request Failed", err)
-	}
+// func (s *airbyteService) DeleteSource(sourceName string) bool {
+// 	token := s.GetAccessToken()
+// 	source, err := s.GetSourceId(sourceName)
+// 	if err != nil {
+// 		helpers.Error("Get Source Id Request Failed", err)
+// 	}
 
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodDelete,
-		SOURCES_ENDPOINT+"/"+*&source.SourceId,
-		nil,
-		&token,
-	)
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodDelete,
+// 		SOURCES_ENDPOINT+"/"+*&source.SourceId,
+// 		nil,
+// 		&token,
+// 	)
 
-	if err != nil {
-		abctlx.Error("Delete Source Request Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("Delete Source Request Failed", err)
+// 	}
 
-	if req.Status >= 400 {
-		return false
-	}
+// 	if req.Status >= 400 {
+// 		return false
+// 	}
 
-	return true
-}
+// 	return true
+// }
 
-func (s *airbyteService) ListSources() *ListSourcesResponse {
-	var response ListSourcesResponse
-	token := s.GetAccessToken()
+// func (s *airbyteService) ListSources() *ListSourcesResponse {
+// 	var response ListSourcesResponse
+// 	token := s.GetAccessToken()
 
-	req, err := s.client.Request(
-		s.ctx,
-		http.MethodGet,
-		SOURCES_ENDPOINT,
-		nil,
-		&token,
-	)
+// 	req, err := s.client.Request(
+// 		s.ctx,
+// 		http.MethodGet,
+// 		SOURCES_ENDPOINT,
+// 		nil,
+// 		&token,
+// 	)
 
-	if err != nil {
-		abctlx.Error("List Sources Request Failed", err)
-	}
+// 	if err != nil {
+// 		helpers.Error("List Sources Request Failed", err)
+// 	}
 
-	if req == nil {
-		abctlx.Error("List Sources Request Failed", err)
-	}
+// 	if req == nil {
+// 		helpers.Error("List Sources Request Failed", err)
+// 	}
 
-	err = json.Unmarshal(req.Body, &response)
-	if err != nil {
-		abctlx.Error("List Sources Unmarshal Failed", err)
-	}
+// 	err = json.Unmarshal(req.Body, &response)
+// 	if err != nil {
+// 		helpers.Error("List Sources Unmarshal Failed", err)
+// 	}
 
-	return &response
-}
+// 	return &response
+// }
 
 func (s *airbyteService) Health() *HealthCheckResponse {
 	_, err := s.client.Request(
@@ -654,13 +655,13 @@ func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	)
 
 	if err != nil {
-		abctlx.Error("Generate Access Token Request Failed", err)
+		helpers.Error("Generate Access Token Request Failed", err)
 		// NewAirbyteError(REQUEST_FAIL, "Generate Access Token", err).Print()
 	}
 
 	err = json.Unmarshal(res.Body, &response)
 	if err != nil {
-		abctlx.Error("Generate Access Token Unmarshal Failed", err)
+		helpers.Error("Generate Access Token Unmarshal Failed", err)
 	}
 
 	return &response
@@ -672,23 +673,23 @@ func (s *airbyteService) GetAccessToken() string {
 	return s.client.GetToken()
 }
 
-func (s *airbyteService) GetSourceId(name string) (*SourceData, error) {
-	sources := s.ListSources()
-	var targetSource SourceData
-	var sourceId *string
+// func (s *airbyteService) GetSourceId(name string) (*SourceData, error) {
+// 	sources := s.ListSources()
+// 	var targetSource SourceData
+// 	var sourceId *string
 
-	for _, source := range sources.Data {
-		if source.Name == name {
-			targetSource = source
-			break
-		}
-	}
+// 	for _, source := range sources.Data {
+// 		if source.Name == name {
+// 			targetSource = source
+// 			break
+// 		}
+// 	}
 
-	if sourceId == nil {
-		return nil, fmt.Errorf("Source ID not found.")
-	}
+// 	if sourceId == nil {
+// 		return nil, fmt.Errorf("Source ID not found.")
+// 	}
 
-	pretty.Print(targetSource)
+// 	pretty.Print(targetSource)
 
-	return &targetSource, nil
-}
+// 	return &targetSource, nil
+// }

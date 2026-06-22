@@ -1,12 +1,12 @@
 package cmd
 
 import (
+	"abctlx/helpers"
 	"abctlx/internal/abctlx"
-	"abctlx/internal/airbyte"
+	"abctlx/internal/abctlx/cmd/destination"
 	"context"
 
 	"github.com/jedib0t/go-pretty/v6/table"
-	"github.com/kr/pretty"
 	"github.com/spf13/cobra"
 )
 
@@ -14,25 +14,25 @@ var destCmd = &cobra.Command{
 	Use:   "dest",
 	Short: "Lists Destinations",
 	Run: func(cmd *cobra.Command, args []string) {
-		runDest()
+		runDest(cmd.Context())
 	},
 }
 
-var createDestFlags airbyte.CreateDestinationFlags
+var createDestFlags destination.CreateDestinationFlags
 var createDestCmd = &cobra.Command{
 	Use:   "create",
 	Short: "Creates Destinations",
 	Run: func(cmd *cobra.Command, args []string) {
-		runCreateDest()
+		runCreateDest(cmd.Context())
 	},
 }
 
-var updateDestFlags airbyte.UpdateDestinationFlags
+var updateDestFlags destination.UpdateDestinationFlags
 var updateDestCmd = &cobra.Command{
 	Use:   "update",
 	Short: "Updates an existing Destination using its Destination Id",
 	Run: func(cmd *cobra.Command, args []string) {
-		runUpdateDest()
+		runUpdateDest(cmd.Context())
 	},
 }
 
@@ -41,7 +41,7 @@ var deleteDestCmd = &cobra.Command{
 	Use:   "delete",
 	Short: "Deletes an existing Destination using its Destination Id",
 	Run: func(cmd *cobra.Command, args []string) {
-		runDeleteDest()
+		runDeleteDest(cmd.Context())
 	},
 }
 
@@ -57,8 +57,15 @@ func init() {
 	destCmd.AddCommand(updateDestCmd)
 }
 
-func runDest() {
-	res := airbyte.NewAirbyteService(context.Background()).ListDestinations(nil)
+func runDest(ctx context.Context) {
+
+	cmdHandler := abctlx.NewCmdHandler(ctx)
+	res := cmdHandler.DestSvc.ListDestinations(
+		ctx,
+		nil,
+		cmdHandler.AirbyteSvc.GetAccessToken(),
+	)
+
 	var body []table.Row
 	for _, data := range res.Data {
 		row := table.Row{
@@ -71,22 +78,45 @@ func runDest() {
 		body = append(body, row)
 	}
 
-	abctlx.Table(table.Row{"ID", "Name", "Type", "Workspace ID"}, body, "Destinations")
+	helpers.Table(table.Row{"ID", "Name", "Type", "Workspace ID"}, body, "Destinations")
 }
 
-func runCreateDest() {
-	res := airbyte.NewAirbyteService(context.Background()).CreateDestination(createDestFlags)
-	pretty.Print(res)
+func runCreateDest(ctx context.Context) {
+	cmdHandler := abctlx.NewCmdHandler(ctx)
+	res := cmdHandler.DestSvc.CreateDestination(
+		ctx,
+		createDestFlags,
+		cmdHandler.AirbyteSvc.GetAccessToken(),
+		*cmdHandler.AirbyteSvc.GetWorkspaceId(),
+	)
+
+	helpers.Log("success", res.Name+" created.")
 }
 
-func runUpdateDest() {
-	res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(updateDestFlags)
-	pretty.Print(res)
+func runUpdateDest(ctx context.Context) {
+	// abSvc := airbyte.NewAirbyteService(ctx)
+	// destSvc := destination.NewService()
+	cmdHandler := abctlx.NewCmdHandler(ctx)
+	res := cmdHandler.DestSvc.UpdateDestination(
+		ctx,
+		updateDestFlags,
+		cmdHandler.AirbyteSvc.GetAccessToken(),
+	)
+	// res := destSvc.UpdateDestination(ctx, updateDestFlags, abSvc.GetAccessToken())
+	// res := airbyte.NewAirbyteService(context.Background()).UpdateDestination(updateDestFlags)
+	// pretty.Print(res)
+
+	helpers.Log("success", res.Name+" updated.")
 }
 
-func runDeleteDest() {
-	res := airbyte.NewAirbyteService(context.Background()).DeleteDestination(deleteDestName)
-	abctlx.BoolLog(res)
+func runDeleteDest(ctx context.Context) {
+	cmdHandler := abctlx.NewCmdHandler(ctx)
+	res := cmdHandler.DestSvc.DeleteDestination(
+		ctx,
+		deleteDestName,
+		cmdHandler.AirbyteSvc.GetAccessToken(),
+	)
+	helpers.BoolLog(res)
 }
 
 func createDestCmdFlags() {

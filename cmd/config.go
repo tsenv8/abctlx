@@ -1,7 +1,7 @@
 package cmd
 
 import (
-	"abctlx/internal/abctlx"
+	"abctlx/helpers"
 	"abctlx/internal/airbyte"
 	"abctlx/internal/config"
 	"strconv"
@@ -16,18 +16,18 @@ var configCmd = &cobra.Command{
 	Run: func(cmd *cobra.Command, args []string) {
 		cfg := airbyte.NewAirbyteClient(config.Data).GetConfig()
 		apiEndpoint := airbyte.NewAirbyteClient(cfg).GetURL(nil)
-		headers := abctlx.ToRow([]string{"Variable", "Value"})
+		headers := helpers.ToRow([]string{"Variable", "Value"})
 		body := []table.Row{
-			abctlx.ToRow([]string{"URL", cfg.URL}),
-			abctlx.ToRow([]string{"API URL", cfg.API_URL}),
-			abctlx.ToRow([]string{"API Endpoint", apiEndpoint}),
-			abctlx.ToRow([]string{"Port", strconv.Itoa(cfg.Port)}),
-			abctlx.ToRow([]string{"Client ID", cfg.ClientId}),
-			abctlx.ToRow([]string{"Client Secret", cfg.ClientKey}),
-			abctlx.ToRow([]string{"Kubeconfig", cfg.Kubeconfig}),
-			abctlx.ToRow([]string{"Namespace", cfg.Namespace}),
+			helpers.ToRow([]string{"URL", cfg.URL}),
+			helpers.ToRow([]string{"API URL", cfg.API_URL}),
+			helpers.ToRow([]string{"API Endpoint", apiEndpoint}),
+			helpers.ToRow([]string{"Port", strconv.Itoa(cfg.Port)}),
+			helpers.ToRow([]string{"Client ID", cfg.ClientId}),
+			helpers.ToRow([]string{"Client Secret", cfg.ClientKey}),
+			helpers.ToRow([]string{"Kubeconfig", cfg.Kubeconfig}),
+			helpers.ToRow([]string{"Namespace", cfg.Namespace}),
 		}
-		abctlx.Table(headers, body, "Configuration")
+		helpers.Table(headers, body, "Configuration")
 	},
 }
 

@@ -1,7 +1,7 @@
 package airbyte
 
 import (
-	"abctlx/internal/abctlx"
+	"abctlx/helpers"
 	"abctlx/internal/config"
 	"bytes"
 	"context"
@@ -104,7 +104,7 @@ func (ac *airbyteClient) Request(
 	}
 	defer res.Body.Close()
 
-	abctlx.LogHttp(method, strconv.Itoa(res.StatusCode), url)
+	helpers.LogHttp(method, strconv.Itoa(res.StatusCode), url)
 	// pretty.Printf("\n  %s  [ %s ] - %s ", color.HiGreenString("[ "+method+" ]"), strconv.Itoa(res.StatusCode), url)
 
 	if res.StatusCode >= http.StatusBadRequest {
