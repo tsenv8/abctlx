@@ -4,6 +4,10 @@ import (
 	"abctlx/helpers"
 	"abctlx/internal/airbyte"
 	"context"
+	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/jedib0t/go-pretty/v6/table"
 	"github.com/spf13/cobra"
@@ -36,9 +40,65 @@ var createConCmd = &cobra.Command{
 	},
 }
 
+var streamsConId string
+var streamsAvailable bool
+var streamsRaw bool
+var streamsCmd = &cobra.Command{
+	Use:   "streams",
+	Short: "Read-only: lists the enabled streams of a connection (--available: what the source offers).",
+	Run: func(cmd *cobra.Command, args []string) {
+		if streamsConId == "" {
+			helpers.Error("--id is required", nil)
+		}
+		s := airbyte.NewAirbyteService(context.Background())
+		con, conRaw, err := s.GetConnectionByID(streamsConId)
+		if err != nil {
+			helpers.Error("Get Connection Failed", err)
+		}
+
+		if !streamsAvailable {
+			if streamsRaw {
+				fmt.Println(string(conRaw))
+				return
+			}
+			var body []table.Row
+			for _, raw := range con.Configurations.Streams {
+				var st airbyte.StreamConfiguration
+				if err := json.Unmarshal(raw, &st); err != nil {
+					helpers.Error("Stream JSON Unmarshal Failed", err)
+				}
+				body = append(body, table.Row{st.Namespace, st.Name, st.SyncMode, strings.Join(st.CursorField, "."), fmt.Sprint(st.PrimaryKey)})
+			}
+			sort.Slice(body, func(i, j int) bool {
+				return fmt.Sprint(body[i][0], ".", body[i][1]) < fmt.Sprint(body[j][0], ".", body[j][1])
+			})
+			helpers.Table(table.Row{"Namespace", "Name", "Sync mode", "Cursor", "Primary key"}, body, fmt.Sprintf("Enabled streams: %s (%d)", con.Name, len(body)))
+			return
+		}
+
+		avail, availRaw, err := s.ListAvailableStreams(con.SourceId, con.DestinationId)
+		if err != nil {
+			helpers.Error("List Available Streams Failed", err)
+		}
+		if streamsRaw {
+			fmt.Println(string(availRaw))
+			return
+		}
+		var body []table.Row
+		for _, a := range avail {
+			body = append(body, table.Row{a.StreamNamespace, a.StreamName, strings.Join(a.SyncModes, ","), fmt.Sprint(a.SourceDefinedPrimaryKey)})
+		}
+		helpers.Table(table.Row{"Namespace", "Name", "Sync modes", "Source PK"}, body, fmt.Sprintf("Available streams: %s (%d)", con.Name, len(body)))
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(conCmd)
 	conCmd.AddCommand(createConCmd)
+	conCmd.AddCommand(streamsCmd)
+	streamsCmd.Flags().StringVar(&streamsConId, "id", "", "Connection ID.")
+	streamsCmd.Flags().BoolVar(&streamsAvailable, "available", false, "List the streams the source offers instead of the enabled ones.")
+	streamsCmd.Flags().BoolVar(&streamsRaw, "json", false, "Print the raw API response (used to check the real shape).")
 	createConCmdFlags()
 }
 
