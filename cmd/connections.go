@@ -43,6 +43,7 @@ var createConCmd = &cobra.Command{
 var streamsConId string
 var streamsAvailable bool
 var streamsRaw bool
+var streamsRefresh bool
 var streamsCmd = &cobra.Command{
 	Use:   "streams",
 	Short: "Read-only: lists the enabled streams of a connection (--available: what the source offers).",
@@ -76,7 +77,7 @@ var streamsCmd = &cobra.Command{
 			return
 		}
 
-		avail, availRaw, err := s.ListAvailableStreams(con.SourceId, con.DestinationId)
+		avail, availRaw, err := s.ListAvailableStreams(con.SourceId, con.DestinationId, streamsRefresh)
 		if err != nil {
 			helpers.Error("List Available Streams Failed", err)
 		}
@@ -98,6 +99,7 @@ func init() {
 	conCmd.AddCommand(streamsCmd)
 	streamsCmd.Flags().StringVar(&streamsConId, "id", "", "Connection ID.")
 	streamsCmd.Flags().BoolVar(&streamsAvailable, "available", false, "List the streams the source offers instead of the enabled ones.")
+	streamsCmd.Flags().BoolVar(&streamsRefresh, "refresh", false, "With --available: ask Airbyte to rediscover the source schema instead of using its cache.")
 	streamsCmd.Flags().BoolVar(&streamsRaw, "json", false, "Print the raw API response (used to check the real shape).")
 	createConCmdFlags()
 }

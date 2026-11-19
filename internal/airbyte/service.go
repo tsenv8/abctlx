@@ -42,7 +42,7 @@ type AirbyteService interface {
 	ListConnections(limit *int) ListConnectionResponse
 	GetConnection(connectionName string) ConnectionData
 	GetConnectionByID(connectionId string) (ConnectionData, []byte, error)
-	ListAvailableStreams(sourceId string, destinationId string) ([]AvailableStream, []byte, error)
+	ListAvailableStreams(sourceId string, destinationId string, ignoreCache bool) ([]AvailableStream, []byte, error)
 	UpdateConnectionStreams(connectionId string, streams []json.RawMessage) (ConnectionData, error)
 
 	//Workspace
@@ -167,10 +167,13 @@ func (s *airbyteService) GetConnectionByID(connectionId string) (ConnectionData,
 
 // ListAvailableStreams returns the streams the source offers for a connection's
 // source and destination, plus the raw body.
-func (s *airbyteService) ListAvailableStreams(sourceId string, destinationId string) ([]AvailableStream, []byte, error) {
+func (s *airbyteService) ListAvailableStreams(sourceId string, destinationId string, ignoreCache bool) ([]AvailableStream, []byte, error) {
 	var response []AvailableStream
 	token := s.GetAccessToken()
 	endpoint := STREAMS_ENDPOINT + "?sourceId=" + url.QueryEscape(sourceId) + "&destinationId=" + url.QueryEscape(destinationId)
+	if ignoreCache {
+		endpoint += "&ignoreCache=true"
+	}
 	res, err := s.client.Request(s.ctx, http.MethodGet, endpoint, nil, &token)
 	if err != nil {
 		return nil, nil, err
