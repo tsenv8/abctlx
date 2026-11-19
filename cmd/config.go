@@ -23,7 +23,7 @@ var configCmd = &cobra.Command{
 			helpers.ToRow([]string{"API Endpoint", apiEndpoint}),
 			helpers.ToRow([]string{"Port", strconv.Itoa(cfg.Port)}),
 			helpers.ToRow([]string{"Client ID", cfg.ClientId}),
-			helpers.ToRow([]string{"Client Secret", cfg.ClientKey}),
+			helpers.ToRow([]string{"Profile", config.CurrentName()}),
 			helpers.ToRow([]string{"Kubeconfig", cfg.Kubeconfig}),
 			helpers.ToRow([]string{"Namespace", cfg.Namespace}),
 		}

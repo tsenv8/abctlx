@@ -12,8 +12,25 @@ import (
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
-	Use:   "abctlx",
-	Short: "Airbyte Controls -- extended.",
+	PersistentPreRunE: skipProfile,
+	Use:               "abctlx",
+	Short:             "Airbyte Controls -- extended.",
+}
+
+var flagProfile string
+
+// skipProfile resolves the chosen profile into config.Data before any command
+// that talks to Airbyte. Profile management, help and completion do not need one.
+func skipProfile(cmd *cobra.Command, args []string) error {
+	top := cmd
+	for top.Parent() != nil && top.Parent().Parent() != nil {
+		top = top.Parent()
+	}
+	switch top.Name() {
+	case "profile", "help", "completion", "abctlx":
+		return nil
+	}
+	return config.Resolve(flagProfile)
 }
 
 func Execute() {
@@ -24,6 +41,6 @@ func Execute() {
 }
 
 func init() {
-	cobra.OnInitialize(config.LoadEnv)
+	rootCmd.PersistentFlags().StringVarP(&flagProfile, "profile", "P", "", "profile to use (default: the active one)")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }

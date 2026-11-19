@@ -38,4 +38,3 @@ func editConCmdFlags() {
 	updateConResCmd.Flags().IntVar(&updateConResRequest.MinMemGb, "min_mem", 0, "The Minimum RAM usage")
 	updateConResCmd.Flags().IntVar(&updateConResRequest.MaxMemGb, "max_mem", 0, "The Maximum RAM usage")
 }
-

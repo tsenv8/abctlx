@@ -690,9 +690,13 @@ func (s *airbyteService) GetClient() AirbyteClient {
 func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	var response GenerateAccessTokenResponse
 	cfg := s.client.GetConfig()
+	secret, err := config.ClientSecret()
+	if err != nil {
+		helpers.Error("Client Secret Unavailable", err)
+	}
 	tokenRequest := GenerateAccessTokenRequest{
 		ClientId:  cfg.ClientId,
-		ClientKey: cfg.ClientKey,
+		ClientKey: secret,
 	}
 
 	res, err := s.client.Request(
