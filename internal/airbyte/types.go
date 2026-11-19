@@ -52,6 +52,12 @@ type ConnectionData struct {
 	Prefix                           string                      `json:"prefix"`
 	Configurations                   StreamConfigurations        `json:"configurations"`
 	CreatedAt                        int                         `json:"createdAt"`
+	Tags                             []ConnectionTag             `json:"tags"`
+}
+
+type ConnectionTag struct {
+	TagId string `json:"tagId"`
+	Name  string `json:"name"`
 }
 type UpdateConnectionRequest struct {
 	Name                             string                       `json:"name,omitempty"`

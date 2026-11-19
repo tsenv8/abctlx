@@ -21,11 +21,15 @@ var conCmd = &cobra.Command{
 		var body []table.Row
 		res := s.ListConnections(nil)
 		for _, data := range res.Data {
-			rowString := []string{data.ConnectionId, data.Name, data.SourceId, data.DestinationId}
+			var tags []string
+			for _, t := range data.Tags {
+				tags = append(tags, t.Name)
+			}
+			rowString := []string{data.ConnectionId, data.Name, strings.Join(tags, ","), data.Status, data.SourceId, data.DestinationId}
 			row := helpers.ToRow(rowString)
 			body = append(body, row)
 		}
-		header := table.Row{"ID", "Name", "Source ID", "Destination ID"}
+		header := table.Row{"ID", "Name", "Tags", "Status", "Source ID", "Destination ID"}
 		helpers.Table(header, body, "Connections")
 	},
 }
