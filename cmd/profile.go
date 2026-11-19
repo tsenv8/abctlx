@@ -23,12 +23,15 @@ Profiles live in ~/.config/abctlx/profiles.json. Nothing is read from .env.`,
 }
 
 var (
-	pfURL, pfAPIURL, pfClientID, pfKubeconfig, pfNamespace string
+	pfURL, pfAPIURL, pfClientID, pfSecret, pfKubeconfig, pfNamespace string
 	pfPort                                                 int
 	pfUse                                                  bool
 )
 
 func readSecret() (string, error) {
+	if pfSecret != "" {
+		return pfSecret, nil
+	}
 	if v := os.Getenv("ABCTLX_CLIENT_SECRET"); v != "" {
 		return v, nil
 	}
@@ -222,6 +225,8 @@ func init() {
 	f.IntVar(&pfPort, "port", config.DefaultPort, "Airbyte port")
 	f.StringVar(&pfAPIURL, "api-url", config.DefaultAPIURL, "API path prefix")
 	f.StringVar(&pfClientID, "client-id", "", "application client id")
+	f.StringVar(&pfSecret, "secret", "", "client secret (default: $ABCTLX_CLIENT_SECRET, else a hidden prompt; a flag lands in shell history)")
+	profileSecretCmd.Flags().StringVar(&pfSecret, "secret", "", "client secret (default: $ABCTLX_CLIENT_SECRET, else a hidden prompt)")
 	f.StringVar(&pfKubeconfig, "kubeconfig", "", "kubeconfig (only for 'res update-connection')")
 	f.StringVar(&pfNamespace, "namespace", config.DefaultNamespace, "Kubernetes namespace (only for 'res update-connection')")
 	f.BoolVar(&pfUse, "use", false, "make it the active profile")

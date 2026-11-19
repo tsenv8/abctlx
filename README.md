@@ -13,7 +13,7 @@ abctlx profile list | show | use <name> | remove <name> | secret <name>
 abctlx -P other connection        # --profile picks one for a single command
 ```
 
-The client secret is stored AES-256-GCM encrypted in `~/.config/abctlx/profiles.json` (0600). The passphrase is never stored: set `$ABCTLX_PASSPHRASE` or type it once per run. For scripts, `$ABCTLX_CLIENT_SECRET` supplies the secret to `profile add`/`secret` instead of the prompt.
+The client secret is stored AES-256-GCM encrypted in `~/.config/abctlx/profiles.json` (0600). The passphrase is never stored: set `$ABCTLX_PASSPHRASE` or type it once per run. The secret can also be given with `--secret` or `$ABCTLX_CLIENT_SECRET` instead of the prompt (a flag ends up in shell history).
 
 ## Connections
 
