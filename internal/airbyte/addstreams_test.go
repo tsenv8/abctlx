@@ -7,7 +7,7 @@ import (
 )
 
 func TestPlanAddStreams(t *testing.T) {
-	existing := []json.RawMessage{json.RawMessage(`{"name":"keep","namespace":"md","syncMode":"incremental_deduped_history","mappers":[{"x":1}]}`)}
+	existing := []json.RawMessage{json.RawMessage(`{"name":"keep","namespace":"md","syncMode":"incremental_deduped_history","selectedFields":[],"mappers":[{"x":1}]}`)}
 	all := []string{"full_refresh_append", "full_refresh_overwrite", "incremental_append", "incremental_deduped_history"}
 	avail := []AvailableStream{
 		{StreamName: "keep", StreamNamespace: "md", SyncModes: all},
@@ -24,8 +24,11 @@ func TestPlanAddStreams(t *testing.T) {
 	if res.Add[0].SyncMode != SYNC_MODE_INCREMENTAL_DEDUPED_HISTORY || res.Add[1].SyncMode != SYNC_MODE_FULL_REFRESH_OVERWRITE {
 		t.Fatalf("modes: %+v", res.Add)
 	}
-	if string(out[0]) != string(existing[0]) || !strings.Contains(string(out[0]), `"mappers":[{"x":1}]`) {
-		t.Fatal("existing stream changed")
+	if strings.Contains(string(out[0]), "selectedFields") || !strings.Contains(string(out[0]), `"mappers":[{"x":1}]`) || !strings.Contains(string(out[0]), `"name":"keep"`) {
+		t.Fatalf("existing stream not normalised or changed: %s", out[0])
+	}
+	if strings.Contains(string(out[1]), "selectedFields") {
+		t.Fatal("new stream sends selectedFields")
 	}
 	if !strings.Contains(string(out[1]), `"primaryKey":[["id"],["branch_id"]]`) || !strings.Contains(string(out[2]), `"primaryKey":[]`) {
 		t.Fatalf("entries: %s %s", out[1], out[2])

@@ -62,7 +62,14 @@ func PlanAddStreams(existing []json.RawMessage, avail []AvailableStream, wanted 
 		offered[a.StreamNamespace+"."+a.StreamName] = a
 	}
 
-	out := append([]json.RawMessage{}, existing...)
+	out := make([]json.RawMessage, 0, len(existing)+len(wanted))
+	for _, raw := range existing {
+		n, err := normalizeStream(raw)
+		if err != nil {
+			return res, nil, err
+		}
+		out = append(out, n)
+	}
 	seen := map[string]bool{}
 	for _, w := range wanted {
 		w = strings.TrimSpace(w)
@@ -99,7 +106,7 @@ func PlanAddStreams(existing []json.RawMessage, avail []AvailableStream, wanted 
 		entry, err := json.Marshal(map[string]any{
 			"name": a.StreamName, "namespace": a.StreamNamespace,
 			"syncMode": mode, "cursorField": cursor, "primaryKey": pk,
-			"includeFiles": false, "selectedFields": []any{}, "mappers": []any{},
+			"includeFiles": false, "mappers": []any{},
 		})
 		if err != nil {
 			return res, nil, err
@@ -108,4 +115,20 @@ func PlanAddStreams(existing []json.RawMessage, avail []AvailableStream, wanted 
 		res.Add = append(res.Add, PlannedStream{Table: w, SyncMode: mode, Cursor: cursor, PrimaryKey: pk, Reason: reason})
 	}
 	return res, out, nil
+}
+
+// normalizeStream makes a stream as Airbyte returned it acceptable to PATCH.
+// GET reports "selectedFields": [] for a stream that syncs every field, but PATCH
+// reads an empty list as "no fields selected" and rejects it (400). Dropping the
+// key means all fields, so the stream is unchanged in meaning. Nothing else is touched.
+func normalizeStream(raw json.RawMessage) (json.RawMessage, error) {
+	var m map[string]json.RawMessage
+	if err := json.Unmarshal(raw, &m); err != nil {
+		return nil, fmt.Errorf("existing stream: %w", err)
+	}
+	if sf, ok := m["selectedFields"]; ok && strings.TrimSpace(string(sf)) == "[]" {
+		delete(m, "selectedFields")
+		return json.Marshal(m)
+	}
+	return raw, nil
 }
