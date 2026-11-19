@@ -24,8 +24,8 @@ Profiles live in ~/.config/abctlx/profiles.json. Nothing is read from .env.`,
 
 var (
 	pfURL, pfAPIURL, pfClientID, pfSecret, pfKubeconfig, pfNamespace string
-	pfPort                                                 int
-	pfUse                                                  bool
+	pfPort                                                           int
+	pfUse                                                            bool
 )
 
 func readSecret() (string, error) {
