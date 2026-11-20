@@ -6,12 +6,33 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 )
+
+// DryRun makes Request print every mutating call (anything but GET and HEAD)
+// and skip sending it. The token request is exempt: it changes nothing and
+// every other call needs it.
+var DryRun bool
+
+// ErrDryRun is returned in place of a response for a skipped call.
+var ErrDryRun = errors.New("dry run: request not sent")
+
+// dryRunExit ends the command after the first skipped call. A skipped call has
+// no response, so nothing after it can run meaningfully. Tests replace it.
+var dryRunExit = func() { os.Exit(0) }
+
+func isMutation(method, endpoint string) bool {
+	if endpoint == GENERATE_ACCESS_TOKEN_ENDPOINT {
+		return false
+	}
+	return method != http.MethodGet && method != http.MethodHead
+}
 
 type AirbyteClient interface {
 	Request(ctx context.Context, method string, endpoint string, requestBody any, token *string) (*AbctlxResponse, error)
@@ -82,6 +103,18 @@ func (ac *airbyteClient) Request(
 
 	//build url
 	url := ac.GetURL(&endpoint)
+
+	if DryRun && isMutation(method, endpoint) {
+		fmt.Printf("\nDry run: not sent\n  %s %s\n", method, url)
+		if requestBody != nil {
+			if pretty, err := json.MarshalIndent(requestBody, "  ", "  "); err == nil {
+				fmt.Printf("  %s\n", pretty)
+			}
+		}
+		fmt.Println("\nNothing was changed.")
+		dryRunExit()
+		return nil, ErrDryRun
+	}
 
 	req, err := http.NewRequestWithContext(ctx, method, url, buf)
 	if err != nil {

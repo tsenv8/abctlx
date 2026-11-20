@@ -4,6 +4,7 @@ Copyright © 2026 NAME HERE <EMAIL ADDRESS>
 package cmd
 
 import (
+	"abctlx/internal/airbyte"
 	"abctlx/internal/config"
 	"os"
 
@@ -25,5 +26,6 @@ func Execute() {
 
 func init() {
 	cobra.OnInitialize(config.LoadEnv)
+	rootCmd.PersistentFlags().BoolVar(&airbyte.DryRun, "dry-run", false, "print every request that would change something, send none, and exit")
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
