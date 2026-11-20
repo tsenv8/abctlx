@@ -1,5 +1,7 @@
 package airbyte
 
+import "encoding/json"
+
 type AbctlxResponse struct {
 	Msg      string
 	Body     []byte
@@ -50,17 +52,23 @@ type ConnectionData struct {
 	Prefix                           string                      `json:"prefix"`
 	Configurations                   StreamConfigurations        `json:"configurations"`
 	CreatedAt                        int                         `json:"createdAt"`
+	Tags                             []ConnectionTag             `json:"tags"`
+}
+
+type ConnectionTag struct {
+	TagId string `json:"tagId"`
+	Name  string `json:"name"`
 }
 type UpdateConnectionRequest struct {
-	Name                             string                      `json:"name,omitempty"`
-	Configurations                   StreamConfigurations        `json:"configurations"`
-	Schedule                         ConnectionScheduleParameter `json:"schedule"`
-	DataResidency                    string                      `json:"dataResidency,omitempty"`
-	NamespaceDefinition              string                      `json:"namespaceDefinition,omitempty"`
-	NamespaceFormat                  string                      `json:"namespaceFormat,omitempty"`
-	Prefix                           string                      `json:"prefix,omitempty"`
-	NonBreakingSchemaUpdatesBehavior string                      `json:"nonBreakingSchemaUpdatesBehavior,omitempty"`
-	Status                           string                      `json:"status,omitempty"`
+	Name                             string                       `json:"name,omitempty"`
+	Configurations                   *StreamConfigurations        `json:"configurations,omitempty"`
+	Schedule                         *ConnectionScheduleParameter `json:"schedule,omitempty"`
+	DataResidency                    string                       `json:"dataResidency,omitempty"`
+	NamespaceDefinition              string                       `json:"namespaceDefinition,omitempty"`
+	NamespaceFormat                  string                       `json:"namespaceFormat,omitempty"`
+	Prefix                           string                       `json:"prefix,omitempty"`
+	NonBreakingSchemaUpdatesBehavior string                       `json:"nonBreakingSchemaUpdatesBehavior,omitempty"`
+	Status                           string                       `json:"status,omitempty"`
 }
 
 type CreateConnectionRequestBody struct {
@@ -93,15 +101,30 @@ type ListConnectionResponse struct {
 	Data     []ConnectionData `json:"data"`
 }
 
+// StreamConfigurations keeps each stream as raw JSON so a read-modify-write
+// (PATCH replaces the whole list) never drops fields abctlx does not model.
 type StreamConfigurations struct {
-	streams []StreamConfiguration
+	Streams []json.RawMessage `json:"streams,omitempty"`
 }
 
+// StreamConfiguration is the display view of one enabled stream. Never send it
+// back to Airbyte; send the raw entries instead.
 type StreamConfiguration struct {
-	Name           string   `json:"name"`
-	SyncMode       string   `json:"syncMode"`
-	CursorField    []string `json:"cursorField"`
-	SelectedFields []string `json:"selectedFields"`
+	Name        string     `json:"name"`
+	Namespace   string     `json:"namespace"`
+	SyncMode    string     `json:"syncMode"`
+	CursorField []string   `json:"cursorField"`
+	PrimaryKey  [][]string `json:"primaryKey"`
+}
+
+// AvailableStream is one entry of GET /v1/streams (what the source offers).
+type AvailableStream struct {
+	StreamName               string     `json:"streamName"`
+	StreamNamespace          string     `json:"streamnamespace"`
+	SyncModes                []string   `json:"syncModes"`
+	DefaultCursorField       []string   `json:"defaultCursorField"`
+	SourceDefinedCursorField bool       `json:"sourceDefinedCursorField"`
+	SourceDefinedPrimaryKey  [][]string `json:"sourceDefinedPrimaryKey"`
 }
 type ConnectionScheduleParameter struct {
 	Type    string `json:"scheduleType"`

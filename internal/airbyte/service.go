@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"os/exec"
 	"strconv"
 
@@ -36,10 +37,13 @@ type AirbyteService interface {
 
 	//Connections
 	CreateConnection(params CreateConnectionRequest) ConnectionData
-	UpdateConnection(params UpdateConnectionRequest, connectionName string) ConnectionData
+	UpdateConnection(params UpdateConnectionRequest, connectionId string) ConnectionData
 	DeleteConnection(connectionName string) bool
 	ListConnections(limit *int) ListConnectionResponse
 	GetConnection(connectionName string) ConnectionData
+	GetConnectionByID(connectionId string) (ConnectionData, []byte, error)
+	ListAvailableStreams(sourceId string, destinationId string, ignoreCache bool) ([]AvailableStream, []byte, error)
+	UpdateConnectionStreams(connectionId string, streams []json.RawMessage) (ConnectionData, error)
 
 	//Workspace
 	ListWorkspaces() *ListWorkspacesResponse
@@ -146,6 +150,54 @@ func (s *airbyteService) GetConnection(connectionName string) ConnectionData {
 	return targetConnection
 }
 
+// GetConnectionByID reads one connection directly. The raw body is returned too,
+// so callers can show what the API really sent.
+func (s *airbyteService) GetConnectionByID(connectionId string) (ConnectionData, []byte, error) {
+	var response ConnectionData
+	token := s.GetAccessToken()
+	res, err := s.client.Request(s.ctx, http.MethodGet, CONNECTION_ENDPOINT+"/"+connectionId, nil, &token)
+	if err != nil {
+		return response, nil, err
+	}
+	if err := json.Unmarshal(res.Body, &response); err != nil {
+		return response, res.Body, err
+	}
+	return response, res.Body, nil
+}
+
+// ListAvailableStreams returns the streams the source offers for a connection's
+// source and destination, plus the raw body.
+func (s *airbyteService) ListAvailableStreams(sourceId string, destinationId string, ignoreCache bool) ([]AvailableStream, []byte, error) {
+	var response []AvailableStream
+	token := s.GetAccessToken()
+	endpoint := STREAMS_ENDPOINT + "?sourceId=" + url.QueryEscape(sourceId) + "&destinationId=" + url.QueryEscape(destinationId)
+	if ignoreCache {
+		endpoint += "&ignoreCache=true"
+	}
+	res, err := s.client.Request(s.ctx, http.MethodGet, endpoint, nil, &token)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := json.Unmarshal(res.Body, &response); err != nil {
+		return nil, res.Body, err
+	}
+	return response, res.Body, nil
+}
+
+// UpdateConnectionStreams replaces the stream list of a connection and touches
+// nothing else (schedule and the other fields are omitted from the PATCH).
+func (s *airbyteService) UpdateConnectionStreams(connectionId string, streams []json.RawMessage) (ConnectionData, error) {
+	var response ConnectionData
+	token := s.GetAccessToken()
+	body := UpdateConnectionRequest{Configurations: &StreamConfigurations{Streams: streams}}
+	res, err := s.client.Request(s.ctx, http.MethodPatch, CONNECTION_ENDPOINT+"/"+connectionId, body, &token)
+	if err != nil {
+		return response, err
+	}
+	err = json.Unmarshal(res.Body, &response)
+	return response, err
+}
+
 func (s *airbyteService) ListConnections(limit *int) ListConnectionResponse {
 	var response ListConnectionResponse
 	var endpoint string
@@ -196,13 +248,13 @@ func (s *airbyteService) DeleteConnection(connectionName string) bool {
 	return true
 }
 
-func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connectionName string) ConnectionData {
+func (s *airbyteService) UpdateConnection(params UpdateConnectionRequest, connectionId string) ConnectionData {
 	var response ConnectionData
 	token := s.GetAccessToken()
 	req, err := s.client.Request(
 		s.ctx,
 		http.MethodPatch,
-		CONNECTION_ENDPOINT+"/"+connectionName,
+		CONNECTION_ENDPOINT+"/"+connectionId,
 		params,
 		&token,
 	)
@@ -641,9 +693,13 @@ func (s *airbyteService) GetClient() AirbyteClient {
 func (s *airbyteService) generateAccessToken() *GenerateAccessTokenResponse {
 	var response GenerateAccessTokenResponse
 	cfg := s.client.GetConfig()
+	secret, err := config.ClientSecret()
+	if err != nil {
+		helpers.Error("Client Secret Unavailable", err)
+	}
 	tokenRequest := GenerateAccessTokenRequest{
 		ClientId:  cfg.ClientId,
-		ClientKey: cfg.ClientKey,
+		ClientKey: secret,
 	}
 
 	res, err := s.client.Request(
