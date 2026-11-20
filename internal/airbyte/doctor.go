@@ -170,7 +170,7 @@ func Doctor(ctx context.Context, profile string) []Check {
 		sort.Strings(parts)
 		detail += " (tags: " + strings.Join(parts, ", ") + ")"
 	}
-	if cons.Next != "" {
+	if len(cons.Data) >= 500 {
 		d.add("connections", CheckWarn, detail+"; more than 500, only the first 500 counted", "")
 	} else {
 		d.add("connections", CheckOK, detail, "")
