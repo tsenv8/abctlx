@@ -74,6 +74,10 @@ func (s *Sealed) Open(pass string) (string, error) {
 
 var cachedPass string
 
+// ForgetPassphrase drops the passphrase remembered for this run. A command runs
+// once, so only tests that switch passphrases need it.
+func ForgetPassphrase() { cachedPass = "" }
+
 // Passphrase returns $ABCTLX_PASSPHRASE, else asks on the terminal (once per
 // run). confirm asks twice, for setting a new one.
 func Passphrase(confirm bool) (string, error) {

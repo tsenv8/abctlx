@@ -21,14 +21,15 @@ var rootCmd = &cobra.Command{
 var flagProfile string
 
 // skipProfile resolves the chosen profile into config.Data before any command
-// that talks to Airbyte. Profile management, help and completion do not need one.
+// that talks to Airbyte. Profile management, doctor (which reports a missing
+// profile itself), help and completion do not need one.
 func skipProfile(cmd *cobra.Command, args []string) error {
 	top := cmd
 	for top.Parent() != nil && top.Parent().Parent() != nil {
 		top = top.Parent()
 	}
 	switch top.Name() {
-	case "profile", "help", "completion", "abctlx":
+	case "profile", "doctor", "help", "completion", "abctlx":
 		return nil
 	}
 	return config.Resolve(flagProfile)
